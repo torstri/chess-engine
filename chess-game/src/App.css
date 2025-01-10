@@ -1,0 +1,24 @@
+/* * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 10rem;
+} */
+
+.container {
+  max-width: 600px; /* Limit the width to a manageable size */
+  margin: 0 auto; /* Center the chessboard horizontally */
+  padding: 20px; /* Add some padding around the board */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow for a polished look */
+}
+
+.container .chessboard {
+  width: 100%; /* Ensure the board scales within the container */
+  height: auto;
+}
