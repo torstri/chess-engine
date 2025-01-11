@@ -46,16 +46,17 @@ function App(): JSX.Element {
   function onDrop(source: Square, target: Square): boolean {
     let move: Move | null = null;
     safeGameMutate((game) => {
-      move = game.move({ from: source, to: target, promotion: "q" } as Move);
+      try {
+        move = game.move({ from: source, to: target, promotion: "q" } as Move);
+      } catch(e) {
+        console.error(e);
+        return false;
+      }
     });
 
     if (move === null) return false; // Illegal move
 
-    // setGameFEN(game.fen()); // Update the FEN after a valid move
-    setTimeout(() => {
-      makeRandomMove(); // Make a random move after a valid move
-    }, 200);
-
+    setTimeout(makeRandomMove, 200);
     return true; // Valid move
   }
 
