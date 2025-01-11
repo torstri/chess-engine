@@ -38,6 +38,7 @@ function App(): JSX.Element {
     safeGameMutate((game) => {
       game.move(game.moves()[0]); // Apply the move
       fenToBoardRepresenation(game.fen());
+      console.log("Lastly: ", game);
     });
   }
 
