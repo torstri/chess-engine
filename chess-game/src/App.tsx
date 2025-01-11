@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Chess, Move } from "chess.js";
+import { Chess, Move, Piece } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Square } from "react-chessboard/dist/chessboard/types";
 import { fenToBoardRepresenation } from "./engine/Engine";
@@ -12,11 +12,25 @@ function App(): JSX.Element {
   const [game, setGame] = useState<Chess>(new Chess());
   const [gameFEN, setGameFEN] = useState<string>(game.fen());
   const [possibleMoves, setPossibleMoves] = useState<string[]>(game.moves());
+  const [selectedPiece, setSelectedPiece] = useState<string>();
+  const [selectedSquare, setSelectedSquare] = useState<Square | undefined>(undefined);
+  const [sourceSelected, setSrcSelected] = useState<boolean>();
+  const [m, setMove] = useState<Move | undefined>(undefined);
 
   useEffect(() => {
     setGameFEN(game.fen());
     setPossibleMoves(game.moves());
   }, [game]);
+
+  useEffect(() => {
+    if(sourceSelected && (m != undefined)) {
+      setSelectedSquare(undefined);
+      setSelectedPiece(undefined);
+      setSrcSelected(false);
+      
+      setTimeout(makeRandomMove, 200);
+    }
+  }, [m])
 
   // Function to safely mutate the game state
   function safeGameMutate(modify: ModifyFunction): void {
@@ -59,10 +73,33 @@ function App(): JSX.Element {
     return true; // Valid move
   }
 
+  function handleSquareClick(square: Square, piece?: string): void {
+    
+    if(sourceSelected) {
+
+      safeGameMutate((game) => {
+        try {
+          setMove(game.move({ from: selectedSquare, to: square, promotion: "q" } as Move));
+        } catch(e) {
+          console.error(e);
+          setSelectedSquare(undefined);
+          setSelectedPiece(undefined);
+          setSrcSelected(false);
+          return;
+        }
+      });
+    } else if(piece != undefined) {
+      setSelectedSquare(square);
+      setSelectedPiece(piece);
+      setSrcSelected(true);
+    }
+
+  }
+
   return (
     <div className="container">
       <div>Current FEN string: {gameFEN}</div>
-      <Chessboard position={game.fen()} onPieceDrop={onDrop} />
+      <Chessboard position={game.fen()} onPieceDrop={onDrop} onSquareClick={handleSquareClick}/>
     </div>
   );
 }
