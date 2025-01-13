@@ -19,7 +19,6 @@ function App(): JSX.Element {
 
   useEffect(() => {
     setGameFEN(game.fen());
-    setPossibleMoves(game.moves());
   }, [game]);
 
   useEffect(() => {
@@ -43,16 +42,17 @@ function App(): JSX.Element {
 
   // Function to make a random move for the computer
   function makeRandomMove(): void {
-    if (game.isGameOver() || game.isDraw() || possibleMoves.length === 0)
+    if (game.isGameOver() || game.isDraw())
       return;
 
-    const randomIndex = Math.floor(Math.random() * possibleMoves.length); // Pick a random move from possible moves
-    const randomMove = possibleMoves[randomIndex];
-
+    
     safeGameMutate((game) => {
-      game.move(game.moves()[0]); // Apply the move
+      const randomMoves = game.moves();
+      if(randomMoves.length == 0) return;
+
+      const randomIndex = Math.floor(Math.random() * randomMoves.length); 
+      game.move(randomMoves[randomIndex]);
       fenToBoardRepresenation(game.fen());
-      console.log("Lastly: ", game);
     });
   }
 
@@ -60,15 +60,17 @@ function App(): JSX.Element {
   function onDrop(source: Square, target: Square): boolean {
     let move: Move | null = null;
     safeGameMutate((game) => {
-      move = game.move({ from: source, to: target, promotion: "q" } as Move);
+      try {
+        move = game.move({ from: source, to: target, promotion: "q" } as Move);
+      } catch(e) {
+        console.error(e);
+        return false;
+      }
     });
 
     if (move === null) return false; // Illegal move
 
-    // setGameFEN(game.fen()); // Update the FEN after a valid move
-    setTimeout(() => {
-      makeRandomMove(); // Make a random move after a valid move
-    }, 200);
+    setTimeout(makeRandomMove, 200);
 
     return true; // Valid move
   }
