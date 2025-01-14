@@ -13,7 +13,6 @@ type ModifyFunction = (game: Chess) => void;
 function App(): JSX.Element {
   const [game, setGame] = useState<Chess>(new Chess());
   const [gameFEN, setGameFEN] = useState<string>(game.fen());
-  const [possibleMoves, setPossibleMoves] = useState<string[]>(game.moves());
   const [selectedPiece, setSelectedPiece] = useState<string>();
   const [selectedSquare, setSelectedSquare] = useState<Square | undefined>(undefined);
   const [sourceSelected, setSrcSelected] = useState<boolean>();

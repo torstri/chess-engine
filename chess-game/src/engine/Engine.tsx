@@ -46,7 +46,7 @@ export function mcts(root: Node): string | undefined {
   console.log("Thinking..");
 
   const startTime = Date.now(); 
-  const duration = 2000;
+  const duration = 4000;
   let current: Node = root;
   current.visits++;
 
@@ -72,7 +72,6 @@ export function mcts(root: Node): string | undefined {
 
     } else if (current.visits > 0) {
       // Node expansion phase
-      console.log("LEAF AND VISITED -> EXPANSION");
       current.nodeExpansion();
     } else {
         // Rollout
@@ -90,12 +89,11 @@ function getOptimalMove(root: Node): string | undefined {
   let move: string | undefined = undefined;
   let maxScore = -Infinity;
   root.children.forEach((child: Node) => {
-    if((child.state.totalScore / Math.max(1, child.visits)) > maxScore) {
+    if(child.state.totalScore > maxScore) {
       move = child.move;
-      maxScore = child.state.totalScore / child.visits;
+      maxScore = child.state.totalScore;
     } 
   })
-
   return move;
 }
 
