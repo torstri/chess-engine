@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Chess, Move, Piece } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Square } from "react-chessboard/dist/chessboard/types";
-import { fenToBoardRepresenation } from "./engine/Engine";
+import { fenToBoardRepresenation, mcts } from "./engine/Engine";
+import { Node } from "./engine/Node";
+import { State } from "./engine/State";
 import "./App.css";
 
 // Define the type for the modify function used in safeGameMutate
@@ -27,9 +29,43 @@ function App(): JSX.Element {
       setSelectedPiece(undefined);
       setSrcSelected(false);
       
-      setTimeout(makeRandomMove, 200);
+      setTimeout(computeMove, 200);
     }
   }, [m])
+
+  useEffect(() => {
+    Node.setPlayer('b');  // set the AI opponent color
+  }, [])
+
+
+  function computeMove(): boolean {
+
+    const root: Node = new Node(
+      new State(game.fen()),
+      game.turn(),
+      0
+    );
+    root.nodeExpansion();
+    root.visited();
+    
+    const move = mcts(root);
+
+    if(move) {
+      safeGameMutate((game) => {
+        try {
+          game.move(move);
+        } catch(e) {
+          console.error(e);
+          return false;
+        }
+      });
+      console.log("COMPUTED MOVE: ", move);
+    } else {
+      throw new Error("No move found");
+    }
+
+    return true;
+  }
 
   // Function to safely mutate the game state
   function safeGameMutate(modify: ModifyFunction): void {
@@ -70,7 +106,7 @@ function App(): JSX.Element {
 
     if (move === null) return false; // Illegal move
 
-    setTimeout(makeRandomMove, 200);
+    setTimeout(computeMove, 200);
 
     return true; // Valid move
   }

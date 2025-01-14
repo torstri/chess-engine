@@ -1,10 +1,22 @@
 import { Chess, Move } from "chess.js";
-import { useState, useMemo } from "react";
+import { Node } from "./Node";
 
 enum Turn {
-  White = 0,
-  Black = 1,
+  White = 'w',
+  Black = 'b',
 }
+
+// Constants
+const C = 2;
+const MAXDEPTH = 100;
+const pieceValue = { 
+  'p': 1,
+  'n': 3,
+  'b': 3,
+  'r': 5,
+  'q': 9,
+  'k': 0,
+};
 
 // interface PieceInterface {
 //   fenNotation: string;
@@ -28,71 +40,130 @@ enum Turn {
 //   k = 12, // "k"
 // }
 
-class State {
-  // possibleMoves: Move[]
-  constructor(gameObject: Chess) {}
-}
+// Monte Carlo Tree Search
+export function mcts(root: Node): string | undefined {
 
-// Node class for representing game states
-class Node {
-  state: number[];
-  turn: Turn;
-  depth: number;
-  parent: Node | null;
-  score: number;
-  gameObject: Chess | undefined;
-  // Maybe hashmap is better suited
-  children: Node[] = [];
+  console.log("Thinking..");
 
-  constructor(state: number[], turn: Turn, depth: number, parent: Node | null) {
-    this.state = state;
-    this.turn = turn;
-    this.depth = depth;
-    this.parent = parent;
-    this.score = 0;
-    this.gameObject = undefined;
-  }
+  const startTime = Date.now(); 
+  const duration = 2000;
+  let current: Node = root;
+  current.visits++;
 
-  // Method to add a child node
-  addChild(state: number[], turn: Turn): Node {
-    // This might become really weird
-    const child = new Node(state, turn, this.depth + 1, this);
-    this.children.push(child);
-    return child;
-  }
+  while (Date.now() - startTime < duration) {
+    // Tree traversal phase
+    if (!current.isLeaf()) {
+      let maxUSB = -Infinity;
+      let selectedChild: Node | undefined;
 
-  setGameObject(gameObject: Chess) {
-    this.gameObject = gameObject;
-  }
+      current.children.forEach((child: Node) => {
+        const ucb = ucb1(child.state.totalScore, current.visits, child.visits);
+        if (ucb > maxUSB) {
+          selectedChild = child;
+          maxUSB = ucb;
+        }
+      });
 
-  // Method to check if this is a leaf node
-  isLeaf(): boolean {
-    return this.children.length === 0;
-  }
+      if (selectedChild) {
+        current = selectedChild;
+      } else {
+        throw new Error("No child found");
+      }
 
-  // Method to get the path from this node to the root
-  getPathToRoot(): Node[] {
-    const path: Node[] = [];
-    let current: Node | null = this;
-    while (current) {
-      path.push(current);
-      current = current.parent;
+    } else if (current.visits > 0) {
+      // Node expansion phase
+      console.log("LEAF AND VISITED -> EXPANSION");
+      current.nodeExpansion();
+    } else {
+        // Rollout
+        propogate(current, rollout(new Chess(current.state.fen)));
+        
+        current = root;
     }
-    return path.reverse(); // Reverse to get path from root to current node
   }
 
-  // Utility method to display the node details (for debugging)
-  display(): void {
-    console.log(`State: ${this.state}`);
-    console.log(`Turn: ${this.turn}`);
-    console.log(`Depth: ${this.depth}`);
-    console.log(`Children count: ${this.children.length}`);
-  }
+  return getOptimalMove(root);
 }
 
-// class Piece implements PieceInterface {
 
-// }
+function getOptimalMove(root: Node): string | undefined {
+  let move: string | undefined = undefined;
+  let maxScore = -Infinity;
+  root.children.forEach((child: Node) => {
+    if((child.state.totalScore / Math.max(1, child.visits)) > maxScore) {
+      move = child.move;
+      maxScore = child.state.totalScore / child.visits;
+    } 
+  })
+
+  return move;
+}
+
+function propogate(leaf: Node, score: number): void {
+  const path = leaf.getPathToRoot();
+  path.forEach((node: Node) => {
+    node.state.totalScore += score;
+    node.visits++;
+  });
+}
+
+function rollout(game: Chess): number {
+  if(game.isGameOver()) return evaluateState(game, Node.getPlayer());
+
+  const randomIndex = Math.floor(Math.random() * game.moves().length); 
+  const randomMove = game.moves()[randomIndex];
+  
+  try {
+    game.move(randomMove);
+  } catch(e) {
+    console.error("MOVE: ", randomMove);
+    throw new Error("INVALID MOVE");
+  }
+  
+
+
+  return rollout(game);
+}
+
+function ucb1(score: number, N: number, n: number): number {
+  // ucb: average value of state + constant * sqrt(ln(times visited parent) / number of visits of this node)
+  // constant choosen to balance the explotation term and the exploration term
+  // explotation term: V_i (average value of state)
+  // exploration term: n_i, number of visits of this node 
+
+  if(n == 0 || N == 0) return Infinity;
+
+  return (score / n) + C * Math.sqrt(Math.log(N) / n);
+}
+
+function evaluateState(game: Chess, player: string): number {
+  // const scoreWhite = getTotalPiecesOnBoard(game, Turn.White);  
+  // const scoreBlack = getTotalPiecesOnBoard(game, Turn.Black);
+
+  // const diff = (scoreBlack - scoreWhite);
+  let win;
+
+  if(game.isCheckmate()) {
+    win = game.turn() == player ? -1 : 1;
+  } else {
+    win = -0.2;
+  }
+
+  return win;
+}
+
+function getTotalPiecesOnBoard(game: Chess, color?: string): number {
+  let score = 0;
+  game.board().forEach((row, rowIdx) => {
+    row.forEach((square, colIdx) => {
+      if((color && square && square.color === color) || (!color && square)) {
+        score += pieceValue[square.type];
+      }
+    })
+  })
+
+  return score;
+}
 
 export function fenToBoardRepresenation(fen: string): void {
   // reference: https://www.youtube.com/watch?v=FsjIJMUIXLI
@@ -114,6 +185,8 @@ export function fenToBoardRepresenation(fen: string): void {
   const halfmoveClock = fenParts[4]; // '0'
   const fullmoveNumber = fenParts[5]; // '1'
 
+  const game = new Chess(fen);
+
   // Output for debugging
   console.log("Board Layout:", boardLayout);
   console.log("Turn:", turn);
@@ -121,6 +194,7 @@ export function fenToBoardRepresenation(fen: string): void {
   console.log("En Passant:", enPassant);
   console.log("Halfmove Clock:", halfmoveClock);
   console.log("Fullmove Number:", fullmoveNumber);
+  console.log(game.ascii());
 
   // Step 4: Iterate over the board layout
   boardLayout.forEach((row, rowIndex) => {
