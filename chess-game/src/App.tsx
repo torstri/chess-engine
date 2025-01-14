@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Chess, Move, Piece } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Square } from "react-chessboard/dist/chessboard/types";
-import { fenToBoardRepresenation, mcts, Node, State } from "./engine/Engine";
+import { fenToBoardRepresenation, mcts } from "./engine/Engine";
+import { Node } from "./engine/Node";
+import { State } from "./engine/State";
 import "./App.css";
 
 // Define the type for the modify function used in safeGameMutate
@@ -16,11 +18,9 @@ function App(): JSX.Element {
   const [selectedSquare, setSelectedSquare] = useState<Square | undefined>(undefined);
   const [sourceSelected, setSrcSelected] = useState<boolean>();
   const [m, setMove] = useState<Move | undefined>(undefined);
-  const [root, setRoot] = useState<Node>();
 
   useEffect(() => {
     setGameFEN(game.fen());
-
   }, [game]);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ function App(): JSX.Element {
   function computeMove(): boolean {
 
     const root: Node = new Node(
-      new State(game),
+      new State(game.fen()),
       game.turn(),
       0
     );

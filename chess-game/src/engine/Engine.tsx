@@ -1,4 +1,5 @@
 import { Chess, Move } from "chess.js";
+import { Node } from "./Node";
 
 enum Turn {
   White = 'w',
@@ -39,105 +40,7 @@ const pieceValue = {
 //   k = 12, // "k"
 // }
 
-export class State {
-  game: Chess;
-  possibleMoves: string[];
-  totalScore: number;
-  constructor(gameObject: Chess) {
-    this.game = gameObject;
-    this.possibleMoves = gameObject.moves() ?? [];
-    this.totalScore = 0;
-  }
-
-  addScore(score: number): void {
-    this.totalScore += score;
-  }
-
-}
-
-// Node class for representing game states
-export class Node {
-  static player: string;
-
-  state: State;
-  turn: string;
-  depth: number;
-  parent: Node | undefined;
-  move: string | undefined;
-  visits: number;
-  // Maybe hashmap is better suited
-  children: Node[] = [];
-
-  constructor(state: State, turn: string, depth: number, parent?: Node, move?: string) {
-    this.state = state;
-    this.turn = turn;
-    this.depth = depth;
-    this.parent = parent;
-    this.move = move;
-    this.visits = 0;
-  }
-
-  static setPlayer(player: string): void {
-    Node.player = player;
-  }
-
-  getPlayer(): string {
-    return Node.player;
-  }
-
-  numMoves(): number {
-    return this.state.possibleMoves.length;
-  }
-
-  moves(): string[] {
-    return this.state.possibleMoves;
-  }
-
-  visited(): void { this.visits++; }
-
-  nodeExpansion() {
-    this.state.possibleMoves.forEach((move: string) => {
-      const gameCopy = new Chess(this.state.game.fen());
-      gameCopy.move(move);
-      this.addChild(
-        new State(gameCopy),    // TODO: init new state
-        gameCopy.turn(),
-        move
-      )
-    });
-  }
-
-  addChild(state: State, turn: string, move: string): Node {
-    // This might become really weird
-    const child = new Node(state, turn, this.depth + 1, this, move);
-    this.children.push(child);
-    return child;
-  }
-
-  isLeaf(): boolean {
-    return this.children.length === 0;
-  }
-
-  getPathToRoot(): Node[] {
-    const path: Node[] = [];
-    let current: Node | undefined = this;
-    while (current) {
-      path.push(current);
-      current = current.parent;
-    }
-    return path.reverse();
-  }
-
-  // Utility method to display the node details (for debugging)
-  display(): void {
-    console.log(`State: ${this.state}`);
-    console.log(`Turn: ${this.turn}`);
-    console.log(`Depth: ${this.depth}`);
-    console.log(`Children count: ${this.children.length}`);
-    console.log(`Score: ${this.state.totalScore}`)
-  }
-}
-
+// Monte Carlo Tree Search
 export function mcts(root: Node): string | undefined {
 
   console.log("Thinking..");
@@ -145,7 +48,7 @@ export function mcts(root: Node): string | undefined {
   const startTime = Date.now(); 
   const duration = 2000;
   let current: Node = root;
-  current.visited();
+  current.visits++;
 
   while (Date.now() - startTime < duration) {
     // Tree traversal phase
@@ -163,20 +66,19 @@ export function mcts(root: Node): string | undefined {
 
       if (selectedChild) {
         current = selectedChild;
-        console.log(current.depth);
       } else {
         throw new Error("No child found");
       }
 
+    } else if (current.visits > 0) {
+      // Node expansion phase
+      console.log("LEAF AND VISITED -> EXPANSION");
+      current.nodeExpansion();
     } else {
-      if (current.visits > 0) {
-        // Node expansion phase
-        current.nodeExpansion();
-      }
-      // Rollout
-      propogate(current, rollout(current));
-      current = root;
-
+        // Rollout
+        propogate(current, rollout(new Chess(current.state.fen)));
+        
+        current = root;
     }
   }
 
@@ -200,35 +102,27 @@ function getOptimalMove(root: Node): string | undefined {
 function propogate(leaf: Node, score: number): void {
   const path = leaf.getPathToRoot();
   path.forEach((node: Node) => {
-    node.state.addScore(score);
-    node.visited();
+    node.state.totalScore += score;
+    node.visits++;
   });
 }
 
-function rollout(node: Node): number {
-  if(node.state.game.isGameOver() || node.numMoves() == 0) return evaluateState(node.state, node.getPlayer());
+function rollout(game: Chess): number {
+  if(game.isGameOver()) return evaluateState(game, Node.getPlayer());
 
-  const randomIndex = Math.floor(Math.random() * node.state.possibleMoves.length); 
-  const gameCopy = new Chess(node.state.game.fen());
-  const randomMove = gameCopy.moves()[randomIndex];
+  const randomIndex = Math.floor(Math.random() * game.moves().length); 
+  const randomMove = game.moves()[randomIndex];
+  
   try {
-    gameCopy.move(randomMove);
+    game.move(randomMove);
   } catch(e) {
     console.error("MOVE: ", randomMove);
     throw new Error("INVALID MOVE");
   }
   
-  // fenToBoardRepresenation(gameCopy.fen());
 
-  const child: Node = new Node(
-    new State(gameCopy),
-    gameCopy.turn(),
-    node.depth + 1,
-    node,
-    randomMove
-  )
 
-  return rollout(child);
+  return rollout(game);
 }
 
 function ucb1(score: number, N: number, n: number): number {
@@ -242,15 +136,15 @@ function ucb1(score: number, N: number, n: number): number {
   return (score / n) + C * Math.sqrt(Math.log(N) / n);
 }
 
-function evaluateState(state: State, player: string): number {
-  const scoreWhite = getTotalPiecesOnBoard(state.game, Turn.White);  
-  const scoreBlack = getTotalPiecesOnBoard(state.game, Turn.Black);
+function evaluateState(game: Chess, player: string): number {
+  // const scoreWhite = getTotalPiecesOnBoard(game, Turn.White);  
+  // const scoreBlack = getTotalPiecesOnBoard(game, Turn.Black);
 
-  const diff = (scoreBlack - scoreWhite);
+  // const diff = (scoreBlack - scoreWhite);
   let win;
 
-  if(state.game.isCheckmate()) {
-    win = state.game.turn() == player ? -1 : 1;
+  if(game.isCheckmate()) {
+    win = game.turn() == player ? -1 : 1;
   } else {
     win = -0.2;
   }
@@ -267,7 +161,7 @@ function getTotalPiecesOnBoard(game: Chess, color?: string): number {
       }
     })
   })
-  // console.log("score", score);
+
   return score;
 }
 
