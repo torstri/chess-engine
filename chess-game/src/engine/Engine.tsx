@@ -1,7 +1,7 @@
 import { Chess, Move } from "chess.js";
 import { Node } from "./Node";
 
-enum Turn {
+enum Player {
   White = 'w',
   Black = 'b',
 }
@@ -41,12 +41,12 @@ const pieceValue = {
 // }
 
 // Monte Carlo Tree Search
-export function mcts(root: Node): string | undefined {
+export function mcts(root: Node): {move: string, child: Node} {
 
   console.log("Thinking..");
 
   const startTime = Date.now(); 
-  const duration = 4000;
+  const duration = 2000;
   let current: Node = root;
   current.visits++;
 
@@ -75,26 +75,26 @@ export function mcts(root: Node): string | undefined {
       current.nodeExpansion();
     } else {
         // Rollout
-        propogate(current, rollout(new Chess(current.state.fen)));
+        propogate(current, rollout(new Chess(current.state.fen), 0));
         
         current = root;
     }
   }
 
-  return getOptimalMove(root);
-}
-
-
-function getOptimalMove(root: Node): string | undefined {
+  let child: Node | undefined = undefined;
   let move: string | undefined = undefined;
   let maxScore = -Infinity;
-  root.children.forEach((child: Node) => {
-    if(child.state.totalScore > maxScore) {
-      move = child.move;
-      maxScore = child.state.totalScore;
+  root.children.forEach((ch: Node) => {
+    if(ch.state.totalScore > maxScore) {
+      child = ch;
+      move = ch.move;
+      maxScore = ch.state.totalScore;
     } 
   })
-  return move;
+
+  if(!move || !child) throw new Error("No move found");
+
+  return {move, child};
 }
 
 function propogate(leaf: Node, score: number): void {
@@ -105,8 +105,15 @@ function propogate(leaf: Node, score: number): void {
   });
 }
 
-function rollout(game: Chess): number {
+function rollout(game: Chess, depth: number): number {
+  
   if(game.isGameOver()) return evaluateState(game, Node.getPlayer());
+
+  if(depth > MAXDEPTH) {
+    const wSum = getSumPieceValue(game, Player.White);
+    const bSum = getSumPieceValue(game, Player.Black);
+    return bSum >= wSum ? 0.5 : -0.5;
+  }
 
   const randomIndex = Math.floor(Math.random() * game.moves().length); 
   const randomMove = game.moves()[randomIndex];
@@ -117,10 +124,8 @@ function rollout(game: Chess): number {
     console.error("MOVE: ", randomMove);
     throw new Error("INVALID MOVE");
   }
-  
 
-
-  return rollout(game);
+  return rollout(game, depth + 1);
 }
 
 function ucb1(score: number, N: number, n: number): number {
@@ -135,8 +140,8 @@ function ucb1(score: number, N: number, n: number): number {
 }
 
 function evaluateState(game: Chess, player: string): number {
-  // const scoreWhite = getTotalPiecesOnBoard(game, Turn.White);  
-  // const scoreBlack = getTotalPiecesOnBoard(game, Turn.Black);
+  // const scoreWhite = getSumPieceValue(game, Turn.White);  
+  // const scoreBlack = getSumPieceValue(game, Turn.Black);
 
   // const diff = (scoreBlack - scoreWhite);
   let win;
@@ -150,7 +155,7 @@ function evaluateState(game: Chess, player: string): number {
   return win;
 }
 
-function getTotalPiecesOnBoard(game: Chess, color?: string): number {
+function getSumPieceValue(game: Chess, color?: string): number {
   let score = 0;
   game.board().forEach((row, rowIdx) => {
     row.forEach((square, colIdx) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { Chess, Move, Piece } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Square } from "react-chessboard/dist/chessboard/types";
@@ -17,6 +17,7 @@ function App(): JSX.Element {
   const [selectedSquare, setSelectedSquare] = useState<Square | undefined>(undefined);
   const [sourceSelected, setSrcSelected] = useState<boolean>();
   const [m, setMove] = useState<Move | undefined>(undefined);
+  const rootRef = useRef<Node>();
 
   useEffect(() => {
     setGameFEN(game.fen());
@@ -39,26 +40,40 @@ function App(): JSX.Element {
 
   function computeMove(): boolean {
 
-    const root: Node = new Node(
-      new State(game.fen()),
-      game.turn(),
-      0
-    );
-    root.nodeExpansion();
-    root.visited();
+    if(game.moveNumber() == 1) {
+      rootRef.current = new Node(
+        new State(game.fen()),
+        game.turn(),
+        0
+      );
+      rootRef.current.nodeExpansion();
+      rootRef.current.visited();
+    } else if(!rootRef.current?.isLeaf()){
+      rootRef.current = rootRef.current?.children.find(child => child.state.fen == game.fen());
+    } else {
+      console.log("NO CHILD");
+      rootRef.current = new Node(
+        new State(game.fen()),
+        game.turn(),
+        0
+      );
+    }
     
-    const move = mcts(root);
+    if(!rootRef.current) throw new Error("Missing root");
+    
+    const result = mcts(rootRef.current);
+    rootRef.current = result.child;
 
-    if(move) {
+    if(result.move) {
       safeGameMutate((game) => {
         try {
-          game.move(move);
+          game.move(result.move);
         } catch(e) {
           console.error(e);
           return false;
         }
       });
-      console.log("COMPUTED MOVE: ", move);
+      console.log("COMPUTED MOVE: ", result.move);
     } else {
       throw new Error("No move found");
     }
