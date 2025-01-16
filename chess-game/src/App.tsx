@@ -39,47 +39,45 @@ function App(): JSX.Element {
 
 
   function computeMove(): boolean {
-
-    if(game.moveNumber() == 1) {
-      rootRef.current = new Node(
-        new State(game.fen()),
-        game.turn(),
-        0
-      );
+    if (game.moveNumber() === 1) {
+      rootRef.current = new Node(new State(game.fen()), game.turn(), 0);
       rootRef.current.nodeExpansion();
-      rootRef.current.visited();
-    } else if(!rootRef.current?.isLeaf()){
-      rootRef.current = rootRef.current?.children.find(child => child.state.fen == game.fen());
+      rootRef.current.visits++;
+    } else if (!rootRef.current?.isLeaf()) {
+      rootRef.current = rootRef.current?.children.find(child => child.state.fen === game.fen());
     } else {
       console.log("NO CHILD");
-      rootRef.current = new Node(
-        new State(game.fen()),
-        game.turn(),
-        0
-      );
+      rootRef.current = new Node(new State(game.fen()), game.turn(), 0);
     }
-    
-    if(!rootRef.current) throw new Error("Missing root");
-    
+  
+    if (!rootRef.current) throw new Error("Missing root");
+  
     const result = mcts(rootRef.current);
     rootRef.current = result.child;
-
-    if(result.move) {
+  
+    if (result.move) {
       safeGameMutate((game) => {
         try {
-          game.move(result.move);
-        } catch(e) {
+          game.move({ from: result.move.from, to: result.move.to, promotion: "q" } as Move);
+        } catch (e) {
           console.error(e);
           return false;
         }
       });
-      console.log("COMPUTED MOVE: ", result.move);
+  
     } else {
       throw new Error("No move found");
     }
+  
+    setTimeout(() => {}, 200);
+    
+    setGameFEN(game.fen());
+
+    console.log(result.move);
 
     return true;
   }
+  
 
   // Function to safely mutate the game state
   function safeGameMutate(modify: ModifyFunction): void {
@@ -151,7 +149,7 @@ function App(): JSX.Element {
   return (
     <div className="container">
       <div>Current FEN string: {gameFEN}</div>
-      <Chessboard position={game.fen()} onPieceDrop={onDrop} onSquareClick={handleSquareClick}/>
+      <Chessboard position={gameFEN} onPieceDrop={onDrop} onSquareClick={handleSquareClick}/>
     </div>
   );
 }

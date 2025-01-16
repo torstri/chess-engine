@@ -1,4 +1,4 @@
-import { Chess, Move } from "chess.js";
+import { Chess, Move, Square, Piece, PieceSymbol } from "chess.js";
 import { Node } from "./Node";
 
 enum Player {
@@ -9,13 +9,14 @@ enum Player {
 // Constants
 const C = 2;
 const MAXDEPTH = 100;
-const pieceValue = { 
+export const pieceValue = { 
   'p': 1,
   'n': 3,
   'b': 3,
   'r': 5,
   'q': 9,
-  'k': 0,
+  'k': 99,
+  '': 0
 };
 
 // interface PieceInterface {
@@ -41,9 +42,9 @@ const pieceValue = {
 // }
 
 // Monte Carlo Tree Search
-export function mcts(root: Node): {move: string, child: Node} {
+export function mcts(root: Node): {move: Move, child: Node} {
 
-  console.log("Thinking..");
+  console.log("Thinking...");
 
   const startTime = Date.now(); 
   const duration = 2000;
@@ -82,7 +83,7 @@ export function mcts(root: Node): {move: string, child: Node} {
   }
 
   let child: Node | undefined = undefined;
-  let move: string | undefined = undefined;
+  let move: Move | undefined = undefined;
   let maxScore = -Infinity;
   root.children.forEach((ch: Node) => {
     if(ch.state.totalScore > maxScore) {
@@ -93,6 +94,8 @@ export function mcts(root: Node): {move: string, child: Node} {
   })
 
   if(!move || !child) throw new Error("No move found");
+
+  console.log("MAX SCORE", maxScore);
 
   return {move, child};
 }
@@ -107,12 +110,12 @@ function propogate(leaf: Node, score: number): void {
 
 function rollout(game: Chess, depth: number): number {
   
-  if(game.isGameOver()) return evaluateState(game, Node.getPlayer());
+  if(game.isGameOver()) return evaluateState(game);
 
   if(depth > MAXDEPTH) {
     const wSum = getSumPieceValue(game, Player.White);
     const bSum = getSumPieceValue(game, Player.Black);
-    return bSum >= wSum ? 0.5 : -0.5;
+    return (bSum - wSum) / (wSum + bSum)
   }
 
   const randomIndex = Math.floor(Math.random() * game.moves().length); 
@@ -139,7 +142,7 @@ function ucb1(score: number, N: number, n: number): number {
   return (score / n) + C * Math.sqrt(Math.log(N) / n);
 }
 
-function evaluateState(game: Chess, player: string): number {
+function evaluateState(game: Chess): number {
   // const scoreWhite = getSumPieceValue(game, Turn.White);  
   // const scoreBlack = getSumPieceValue(game, Turn.Black);
 
@@ -147,7 +150,7 @@ function evaluateState(game: Chess, player: string): number {
   let win;
 
   if(game.isCheckmate()) {
-    win = game.turn() == player ? -1 : 1;
+    win = game.turn() == Node.getPlayer() ? -1 : 1;
   } else {
     win = -0.2;
   }
@@ -166,6 +169,19 @@ function getSumPieceValue(game: Chess, color?: string): number {
   })
 
   return score;
+}
+
+export function getAttackedPiece(game: Chess, move: Move): PieceSymbol | undefined {
+  if (game.isAttacked(move.to, game.turn())) {
+    const board = game.board(); 
+    const fileIndex = move.to.charCodeAt(0) - 'a'.charCodeAt(0);
+    const rankIndex = 8 - parseInt(move.to[1]);
+    const piece = board[rankIndex][fileIndex];
+
+    return piece?.type;
+  }
+
+  return undefined;
 }
 
 export function fenToBoardRepresenation(fen: string): void {
