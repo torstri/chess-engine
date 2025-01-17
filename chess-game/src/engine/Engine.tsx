@@ -1,7 +1,7 @@
-import { Chess, Move } from "chess.js";
+import { Chess, Move, Square, Piece, PieceSymbol } from "chess.js";
 import { Node } from "./Node";
 
-enum Turn {
+enum Player {
   White = 'w',
   Black = 'b',
 }
@@ -9,13 +9,14 @@ enum Turn {
 // Constants
 const C = 2;
 const MAXDEPTH = 100;
-const pieceValue = { 
+export const pieceValue = { 
   'p': 1,
   'n': 3,
   'b': 3,
   'r': 5,
   'q': 9,
-  'k': 0,
+  'k': 99,
+  '': 0
 };
 
 // interface PieceInterface {
@@ -41,12 +42,12 @@ const pieceValue = {
 // }
 
 // Monte Carlo Tree Search
-export function mcts(root: Node): string | undefined {
+export function mcts(root: Node): {move: Move, child: Node} {
 
-  console.log("Thinking..");
+  console.log("Thinking...");
 
   const startTime = Date.now(); 
-  const duration = 4000;
+  const duration = 2000;
   let current: Node = root;
   current.visits++;
 
@@ -75,26 +76,28 @@ export function mcts(root: Node): string | undefined {
       current.nodeExpansion();
     } else {
         // Rollout
-        propogate(current, rollout(new Chess(current.state.fen)));
+        propogate(current, rollout(new Chess(current.state.fen), 0));
         
         current = root;
     }
   }
 
-  return getOptimalMove(root);
-}
-
-
-function getOptimalMove(root: Node): string | undefined {
-  let move: string | undefined = undefined;
+  let child: Node | undefined = undefined;
+  let move: Move | undefined = undefined;
   let maxScore = -Infinity;
-  root.children.forEach((child: Node) => {
-    if(child.state.totalScore > maxScore) {
-      move = child.move;
-      maxScore = child.state.totalScore;
+  root.children.forEach((ch: Node) => {
+    if(ch.state.totalScore > maxScore) {
+      child = ch;
+      move = ch.move;
+      maxScore = ch.state.totalScore;
     } 
   })
-  return move;
+
+  if(!move || !child) throw new Error("No move found");
+
+  console.log("MAX SCORE", maxScore);
+
+  return {move, child};
 }
 
 function propogate(leaf: Node, score: number): void {
@@ -105,8 +108,15 @@ function propogate(leaf: Node, score: number): void {
   });
 }
 
-function rollout(game: Chess): number {
-  if(game.isGameOver()) return evaluateState(game, Node.getPlayer());
+function rollout(game: Chess, depth: number): number {
+  
+  if(game.isGameOver()) return evaluateState(game);
+
+  if(depth > MAXDEPTH) {
+    const wSum = getSumPieceValue(game, Player.White);
+    const bSum = getSumPieceValue(game, Player.Black);
+    return (bSum - wSum) / (wSum + bSum)
+  }
 
   const randomIndex = Math.floor(Math.random() * game.moves().length); 
   const randomMove = game.moves()[randomIndex];
@@ -117,10 +127,8 @@ function rollout(game: Chess): number {
     console.error("MOVE: ", randomMove);
     throw new Error("INVALID MOVE");
   }
-  
 
-
-  return rollout(game);
+  return rollout(game, depth + 1);
 }
 
 function ucb1(score: number, N: number, n: number): number {
@@ -134,15 +142,15 @@ function ucb1(score: number, N: number, n: number): number {
   return (score / n) + C * Math.sqrt(Math.log(N) / n);
 }
 
-function evaluateState(game: Chess, player: string): number {
-  // const scoreWhite = getTotalPiecesOnBoard(game, Turn.White);  
-  // const scoreBlack = getTotalPiecesOnBoard(game, Turn.Black);
+function evaluateState(game: Chess): number {
+  // const scoreWhite = getSumPieceValue(game, Turn.White);  
+  // const scoreBlack = getSumPieceValue(game, Turn.Black);
 
   // const diff = (scoreBlack - scoreWhite);
   let win;
 
   if(game.isCheckmate()) {
-    win = game.turn() == player ? -1 : 1;
+    win = game.turn() == Node.getPlayer() ? -1 : 1;
   } else {
     win = -0.2;
   }
@@ -150,7 +158,7 @@ function evaluateState(game: Chess, player: string): number {
   return win;
 }
 
-function getTotalPiecesOnBoard(game: Chess, color?: string): number {
+function getSumPieceValue(game: Chess, color?: string): number {
   let score = 0;
   game.board().forEach((row, rowIdx) => {
     row.forEach((square, colIdx) => {
@@ -161,6 +169,19 @@ function getTotalPiecesOnBoard(game: Chess, color?: string): number {
   })
 
   return score;
+}
+
+export function getAttackedPiece(game: Chess, move: Move): PieceSymbol | undefined {
+  if (game.isAttacked(move.to, game.turn())) {
+    const board = game.board(); 
+    const fileIndex = move.to.charCodeAt(0) - 'a'.charCodeAt(0);
+    const rankIndex = 8 - parseInt(move.to[1]);
+    const piece = board[rankIndex][fileIndex];
+
+    return piece?.type;
+  }
+
+  return undefined;
 }
 
 export function fenToBoardRepresenation(fen: string): void {
