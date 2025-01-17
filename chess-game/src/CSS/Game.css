@@ -16,9 +16,17 @@
   margin: 0 auto; /* Center the chessboard horizontally */
   padding: 20px; /* Add some padding around the board */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow for a polished look */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .container .chessboard {
   width: 100%; /* Ensure the board scales within the container */
   height: auto;
+}
+
+.home-button {
+  padding: 10px;
+  margin: 10px;
 }
