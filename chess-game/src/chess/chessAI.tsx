@@ -100,12 +100,14 @@ export function mcts(root: Node): {move: Move, child: Node} {
   return {move, child};
 }
 
-function propogate(leaf: Node, score: number): void {
-  const path = leaf.getPathToRoot();
-  path.forEach((node: Node) => {
-    node.state.totalScore += score;
-    node.visits++;
-  });
+function propogate(current: Node, score: number): void {
+  current.addScore(score);
+  current.visits++;
+  while(current.parent) {
+    current = current.parent;
+    current.addScore(score);
+    current.visits++;
+  }
 }
 
 function rollout(game: Chess, depth: number): number {
@@ -152,7 +154,7 @@ function evaluateState(game: Chess): number {
   if(game.isCheckmate()) {
     win = game.turn() == Node.getPlayer() ? -1 : 1;
   } else {
-    win = -0.2;
+    win = 0.5;
   }
 
   return win;

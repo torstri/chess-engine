@@ -2,11 +2,12 @@ import { CardContent } from "@mui/material";
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Card from '@mui/material/Card';
-import Link from '@mui/material/Link'; 
+import { useNavigate } from 'react-router-dom';
 
 
 
 function Home(): JSX.Element {
+    const navigate = useNavigate();
 
     return (
         <Card
@@ -20,10 +21,8 @@ function Home(): JSX.Element {
         >
         <CardContent color="black">
             <ButtonGroup variant="text" aria-label="Basic button group" size="large">
-            <Link href="/game" underline="none" color="black">
-                <Button sx={{ color: 'black' }}>Play against AI</Button>
-            </Link>
-            <Button sx={{ color: 'black' }}>AI vs AI</Button>
+                <Button sx={{ color: 'black' }} onClick={() => { navigate("/game") }}>Play against AI</Button>
+                <Button sx={{ color: 'black' }}>AI vs AI</Button>
             </ButtonGroup>
         </CardContent>
         </Card>
