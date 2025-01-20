@@ -26,7 +26,14 @@
   height: auto;
 }
 
-.home-button {
+.button-group {
   padding: 10px;
   margin: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.button-group Button {
+  margin: 3px;
 }

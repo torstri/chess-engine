@@ -71,15 +71,9 @@ export class Node {
       }
       return path.reverse();
     }
-  
-    // this is less efficient than using getPathToRoot then -> path.forEach
-    // for some reason..
-    propogate(score: number): void {
-      let current: Node | undefined = this;
-      while (current) {
-        current.state.totalScore += score;
-        current = current.parent;
-      }
+
+    addScore(score: number): void {
+      this.state.totalScore += score;
     }
   
     // Utility method to display the node details (for debugging)

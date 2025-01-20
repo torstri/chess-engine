@@ -6,8 +6,9 @@ import { fenToBoardRepresenation, mcts } from "./chessAI";
 import { Node } from "./Node";
 import { State } from "./State";
 import Button from '@mui/material/Button';
-import Link from '@mui/material/Link'; 
+import { useNavigate } from 'react-router-dom';
 import "../CSS/Game.css";
+
 
 // Define the type for the modify function used in safeGameMutate
 type ModifyFunction = (game: Chess) => void;
@@ -16,12 +17,12 @@ function Game(): JSX.Element {
   const [game, setGame] = useState<Chess>(new Chess());
   const [gameFEN, setGameFEN] = useState<string>(game.fen());
   const [selectedPiece, setSelectedPiece] = useState<string>();
-  const [selectedSquare, setSelectedSquare] = useState<Square | undefined>(
-    undefined
-  );
+  const [selectedSquare, setSelectedSquare] = useState<Square | undefined>(undefined);
   const [sourceSelected, setSrcSelected] = useState<boolean>();
   const [m, setMove] = useState<Move | undefined>(undefined);
+  const [loading, setLoading] = useState<boolean>(false);
   const rootRef = useRef<Node>();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setGameFEN(game.fen());
@@ -42,6 +43,7 @@ function Game(): JSX.Element {
   }, []);
 
   function computeMove(): boolean {
+
     if (game.moveNumber() === 1) {
       rootRef.current = new Node(new State(game.fen()), game.turn(), 0);
       rootRef.current.nodeExpansion();
@@ -80,6 +82,8 @@ function Game(): JSX.Element {
     setTimeout(() => {}, 200);
 
     setGameFEN(game.fen());
+
+    setLoading(false);
 
     console.log(result.move);
 
@@ -130,6 +134,7 @@ function Game(): JSX.Element {
 
   function handleSquareClick(square: Square, piece?: string): void {
     if (sourceSelected) {
+      setLoading(true);
       safeGameMutate((game) => {
         try {
           setMove(
@@ -162,10 +167,9 @@ function Game(): JSX.Element {
         onPieceDrop={onDrop}
         onSquareClick={handleSquareClick}
       />
-      <div className="home-button">
-        <Link href="/" underline="none" color="black">
-          <Button sx={{ color: 'black' }} variant="outlined">Home</Button>
-        </Link>
+      <div className="button-group">
+        <Button sx={{ color: 'black' }} variant="outlined" disabled={loading} onClick={() => { window.location.reload(); }}>Reload</Button>
+        <Button sx={{ color: 'black' }} variant="outlined" disabled={loading} onClick={() => { navigate("/"); }}>Home</Button>
       </div>
     </div>
   );

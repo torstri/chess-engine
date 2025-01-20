@@ -37,10 +37,6 @@ export class State {
     return score;
   }
 
-  addScore(score: number): void {
-    this.totalScore += score;
-  }
-
   possibleMoves(): Move[] {
     return new Chess(this.fen).moves({ verbose: true });
   }
