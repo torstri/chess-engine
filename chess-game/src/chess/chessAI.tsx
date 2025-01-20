@@ -11,6 +11,7 @@ enum Player {
 const C = 2;
 const MAXDEPTH = 5;
 const duration = 500;
+const totPieceValue =  39
 export const pieceValue = { 
   'p': 1,
   'n': 3,
@@ -42,7 +43,7 @@ export class ChessAI {
   
     const startTime = Date.now(); 
     let current: Node = this.root;
-  
+    
     while (Date.now() - startTime < duration) {
       // Tree traversal phase
       if (!current.isLeaf()) {
@@ -111,7 +112,7 @@ export class ChessAI {
     if(depth > MAXDEPTH) {
       const wSum = this.getSumPieceValue(game, Player.White);
       const bSum = this.getSumPieceValue(game, Player.Black);
-      return (bSum - wSum) / (wSum + bSum)
+      return (wSum - bSum) / totPieceValue;
     }
   
     const randomIndex = Math.floor(Math.random() * game.moves().length); 
@@ -146,9 +147,9 @@ export class ChessAI {
     let win;
   
     if(game.isCheckmate()) {
-      win = game.turn() == Node.getPlayer() ? -1 : 1;
+      win = game.turn() == Node.getPlayer() ? -2 : 2;
     } else {
-      win = 0.5;
+      win = 1;
     }
   
     return win;
@@ -156,8 +157,8 @@ export class ChessAI {
   
   getSumPieceValue(game: Chess, color?: string): number {
     let score = 0;
-    game.board().forEach((row, rowIdx) => {
-      row.forEach((square, colIdx) => {
+    game.board().forEach((row) => {
+      row.forEach((square) => {
         if((color && square && square.color === color) || (!color && square)) {
           score += pieceValue[square.type];
         }

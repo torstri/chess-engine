@@ -2,7 +2,7 @@ import { Chess, Move } from "chess.js";
 import { pieceValue } from "./chessAI";
 
 enum stateBias {
-  castled = 0.1,
+  castled = 0.5,
   inCheck = 0.5,
 }
 
@@ -27,8 +27,8 @@ export class State {
     if (move.captured)
       score +=
         move.color == player
-          ? pieceValue[move.captured] / pieceValue["q"]
-          : -(pieceValue[move.captured] / pieceValue["q"]);
+          ? pieceValue[move.captured] / pieceValue['q']
+          : -(pieceValue[move.captured] / pieceValue['q']);
 
     return score;
   }
