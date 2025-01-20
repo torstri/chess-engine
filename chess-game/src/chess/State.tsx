@@ -1,6 +1,5 @@
 import { Chess, Move } from "chess.js";
 import { pieceValue } from "./chessAI";
-import { getAttackedPiece } from "./chessAI";
 
 enum stateBias {
   castled = 0.1,

@@ -1,28 +1,15 @@
-/* * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.app {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 10rem;
-} */
-
 .container {
-  max-width: 600px; /* Limit the width to a manageable size */
-  margin: 0 auto; /* Center the chessboard horizontally */
-  padding: 20px; /* Add some padding around the board */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow for a polished look */
+  max-width: 600px; 
+  margin: 0 auto;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .container .chessboard {
-  width: 100%; /* Ensure the board scales within the container */
+  width: 100%;
   height: auto;
 }
 
@@ -30,10 +17,12 @@
   padding: 10px;
   margin: 10px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
 }
 
 .button-group Button {
-  margin: 3px;
+  margin: 10px;
+  padding: 8px;
+  color: black;
 }

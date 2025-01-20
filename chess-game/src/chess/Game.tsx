@@ -1,10 +1,8 @@
-import { useEffect, useReducer, useRef, useState } from "react";
-import { Chess, Move, Piece } from "chess.js";
+import { useEffect, useState } from "react";
+import { Chess, Move } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Square } from "react-chessboard/dist/chessboard/types";
-import { fenToBoardRepresenation, mcts } from "./chessAI";
-import { Node } from "./Node";
-import { State } from "./State";
+import { ChessAI } from "./chessAI";
 import Button from '@mui/material/Button';
 import { useNavigate } from 'react-router-dom';
 import "../CSS/Game.css";
@@ -21,8 +19,8 @@ function Game(): JSX.Element {
   const [sourceSelected, setSrcSelected] = useState<boolean>();
   const [m, setMove] = useState<Move | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(false);
-  const rootRef = useRef<Node>();
   const navigate = useNavigate();
+  const [chessBot, setChessBot] = useState<ChessAI>();
 
   useEffect(() => {
     setGameFEN(game.fen());
@@ -39,35 +37,21 @@ function Game(): JSX.Element {
   }, [m]);
 
   useEffect(() => {
-    Node.setPlayer("b"); // set the AI opponent color
+    setChessBot(() => {
+      return new ChessAI(game, 'b');
+    });
   }, []);
 
   function computeMove(): boolean {
 
-    if (game.moveNumber() === 1) {
-      rootRef.current = new Node(new State(game.fen()), game.turn(), 0);
-      rootRef.current.nodeExpansion();
-      rootRef.current.visits++;
-    } else if (!rootRef.current?.isLeaf()) {
-      rootRef.current = rootRef.current?.children.find(
-        (child) => child.state.fen === game.fen()
-      );
-    } else {
-      console.log("NO CHILD");
-      rootRef.current = new Node(new State(game.fen()), game.turn(), 0);
-    }
+    const move = chessBot?.makeMove(game);
 
-    if (!rootRef.current) throw new Error("Missing root");
-
-    const result = mcts(rootRef.current);
-    rootRef.current = result.child;
-
-    if (result.move) {
+    if (move) {
       safeGameMutate((game) => {
         try {
           game.move({
-            from: result.move.from,
-            to: result.move.to,
+            from: move.from,
+            to: move.to,
             promotion: "q",
           } as Move);
         } catch (e) {
@@ -85,8 +69,6 @@ function Game(): JSX.Element {
 
     setLoading(false);
 
-    console.log(result.move);
-
     return true;
   }
 
@@ -97,39 +79,6 @@ function Game(): JSX.Element {
       modify(update);
       return update;
     });
-  }
-
-  // Function to make a random move for the computer
-  function makeRandomMove(): void {
-    if (game.isGameOver() || game.isDraw()) return;
-
-    safeGameMutate((game) => {
-      const randomMoves = game.moves();
-      if (randomMoves.length == 0) return;
-
-      const randomIndex = Math.floor(Math.random() * randomMoves.length);
-      game.move(randomMoves[randomIndex]);
-      fenToBoardRepresenation(game.fen());
-    });
-  }
-
-  // Function to handle piece drop by the user
-  function onDrop(source: Square, target: Square): boolean {
-    let move: Move | null = null;
-    safeGameMutate((game) => {
-      try {
-        move = game.move({ from: source, to: target, promotion: "q" } as Move);
-      } catch (e) {
-        console.error(e);
-        return false;
-      }
-    });
-
-    if (move === null) return false; // Illegal move
-
-    setTimeout(computeMove, 200);
-
-    return true; // Valid move
   }
 
   function handleSquareClick(square: Square, piece?: string): void {
@@ -163,12 +112,11 @@ function Game(): JSX.Element {
     <div className="container">
       <Chessboard
         position={gameFEN}
-        onPieceDrop={onDrop}
         onSquareClick={handleSquareClick}
       />
       <div className="button-group">
-        <Button sx={{ color: 'black' }} variant="outlined" disabled={loading} onClick={() => { window.location.reload(); }}>Restart</Button>
-        <Button sx={{ color: 'black' }} variant="outlined" disabled={loading} onClick={() => { navigate("/"); }}>Home</Button>
+        <Button variant="outlined" disabled={loading} onClick={() => { window.location.reload(); }}>Restart</Button>
+        <Button variant="outlined" disabled={loading} onClick={() => { navigate("/"); }}>Home</Button>
       </div>
     </div>
   );
