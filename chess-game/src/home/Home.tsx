@@ -22,7 +22,7 @@ function Home(): JSX.Element {
         <CardContent color="black">
             <ButtonGroup variant="text" aria-label="Basic button group" size="large">
                 <Button sx={{ color: 'black' }} onClick={() => { navigate("/game") }}>Play against AI</Button>
-                <Button sx={{ color: 'black' }}>AI vs AI</Button>
+                <Button sx={{ color: 'black' }} onClick={() => { navigate("/ai-vs-ai") }}>AI vs AI</Button>
             </ButtonGroup>
         </CardContent>
         </Card>
