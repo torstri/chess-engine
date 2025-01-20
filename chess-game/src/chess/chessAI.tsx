@@ -8,7 +8,8 @@ enum Player {
 
 // Constants
 const C = 2;
-const MAXDEPTH = 100;
+const MAXDEPTH = 5;
+const duration = 500;
 export const pieceValue = { 
   'p': 1,
   'n': 3,
@@ -47,7 +48,6 @@ export function mcts(root: Node): {move: Move, child: Node} {
   console.log("Thinking...");
 
   const startTime = Date.now(); 
-  const duration = 2000;
   let current: Node = root;
   current.visits++;
 
