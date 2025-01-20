@@ -3,7 +3,7 @@ import { pieceValue } from "./chessAI";
 import { getAttackedPiece } from "./chessAI";
 
 enum stateBias {
-  attacked = 0.1,
+  castled = 0.1,
   inCheck = 0.5,
 }
 
@@ -22,11 +22,8 @@ export class State {
     if (game.isCheck())
       score += move.color == player ? stateBias.inCheck : -stateBias.inCheck;
 
-    // if(game.isAttacked(move.to, move.color)) {
-    //   const attackedPiece = getAttackedPiece(game, move) ?? '';
-    //   const pv = pieceValue[attackedPiece];
-    //   score += move.color != player ? stateBias.attacked*pv : -stateBias.attacked*pv;
-    // }
+    if(move.san.includes('O-O') || move.san.includes('O-O-O')) 
+      score += move.color == player ? stateBias.castled : -stateBias.castled;
 
     if (move.captured)
       score +=

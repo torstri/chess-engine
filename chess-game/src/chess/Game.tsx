@@ -161,14 +161,13 @@ function Game(): JSX.Element {
 
   return (
     <div className="container">
-      <div>Current FEN string: {gameFEN}</div>
       <Chessboard
         position={gameFEN}
         onPieceDrop={onDrop}
         onSquareClick={handleSquareClick}
       />
       <div className="button-group">
-        <Button sx={{ color: 'black' }} variant="outlined" disabled={loading} onClick={() => { window.location.reload(); }}>Reload</Button>
+        <Button sx={{ color: 'black' }} variant="outlined" disabled={loading} onClick={() => { window.location.reload(); }}>Restart</Button>
         <Button sx={{ color: 'black' }} variant="outlined" disabled={loading} onClick={() => { navigate("/"); }}>Home</Button>
       </div>
     </div>
