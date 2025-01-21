@@ -44,6 +44,12 @@ function Game(): JSX.Element {
 
   function computeMove(): boolean {
 
+    if(game.isGameOver()) {
+      console.log("Game Over");
+      setLoading(false);
+      return false;
+    }
+
     const move = chessBot?.makeMove(game);
 
     if (move) {
@@ -108,6 +114,21 @@ function Game(): JSX.Element {
     }
   }
 
+  function resetGame() {
+
+    setSelectedSquare(undefined);
+    setSelectedPiece(undefined);
+    setSrcSelected(false);
+
+    game.reset();
+    setGame(game);
+    setGameFEN(game.fen());
+
+    setChessBot(() => {
+      return new ChessAI(game, 'b');
+    });
+  }
+
   return (
     <div className="container">
       <Chessboard
@@ -115,7 +136,7 @@ function Game(): JSX.Element {
         onSquareClick={handleSquareClick}
       />
       <div className="button-group">
-        <Button variant="outlined" disabled={loading} onClick={() => { window.location.reload(); }}>Restart</Button>
+        <Button variant="outlined" disabled={loading} onClick={resetGame}>Restart</Button>
         <Button variant="outlined" disabled={loading} onClick={() => { navigate("/"); }}>Home</Button>
       </div>
     </div>

@@ -5,20 +5,20 @@ import { ChessAI } from "./chessAI";
 import Button from "@mui/material/Button";
 import { useNavigate } from 'react-router-dom';
 import "../CSS/AIGame.css";
-import { BackdropProps } from "@mui/material";
 
 
-function AIvsAI(): JSX.Element {
+function AIGame(): JSX.Element {
   const [game, setGame] = useState<Chess>(new Chess());
   const [gameFEN, setGameFEN] = useState<string>(game.fen());
-  const navigate = useNavigate();
   const [whiteBot, setWhiteBot] = useState<ChessAI>();
   const [blackBot, setBlackBot] = useState<ChessAI>();
   const [start, setStart] = useState<boolean>(false);
   const [turn, setTurn] = useState<boolean>(false);  // white: true, black: false
   const [pause, setPause] = useState<boolean>(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
+
     setWhiteBot(() => {
       return new ChessAI(game, 'w');
     });
@@ -31,21 +31,24 @@ function AIvsAI(): JSX.Element {
 
   useEffect(() => {
 
-    if(start && !pause) {
-      if(turn) {
-        if(!playNextMove) setStart(false);
+    if (start && !pause) {
+
+      if (turn) {
+        const success = playNextMove();
+        if (!success) setStart(false);
+        else setGameFEN(game.fen());
       } else {
-        if(!playRandomMove()) setStart(false);
+        const success = playRandomMove();
+        if (!success) setStart(false);
+        else setGameFEN(game.fen());
       }
 
-      setGameFEN(game.fen());
-      
       setTimeout(() => {
         setTurn(!turn);
       }, 200);
     }
-
   }, [turn, pause]);
+  
  
 
   function playNextMove(): boolean {
@@ -56,7 +59,23 @@ function AIvsAI(): JSX.Element {
     }
 
     const move = turn ? whiteBot?.makeMove(game) : blackBot?.makeMove(game);
+    return moveUpdate(move);
+  }
 
+  function playRandomMove(): boolean {
+
+    if (game.isGameOver()) {
+      console.log("Game Over");
+      return false;
+    }
+
+    var possibleMoves = game.moves({verbose: true});
+    var randomIdx = Math.floor(Math.random() * possibleMoves.length);
+    const randMove = possibleMoves[randomIdx];
+    return moveUpdate(randMove);
+  }
+
+  function moveUpdate(move?: Move): boolean {
     try {
       game.move({
         from: move?.from,
@@ -71,38 +90,13 @@ function AIvsAI(): JSX.Element {
     return true;
   }
 
-  function playRandomMove(): boolean {
-    var possibleMoves = game.moves({verbose: true});
-    var randomIdx = Math.floor(Math.random() * possibleMoves.length);
-    const randMove = possibleMoves[randomIdx];
-
-    try {
-      game.move({
-        from: randMove.from,
-        to: randMove.to,
-        promotion: randMove.promotion,
-      } as Move);
-    } catch(e) {
-      console.error(e);
-      return false;
-    }
-
-    return true;
+  function togglePlay(start: boolean, pause: boolean, turn: boolean) {
+    setStart(start);
+    setPause(pause);
+    setTurn(turn);
   }
 
-  function startGame() {
-    setStart(true);
-    setPause(false);
-    setTurn(!turn);
-  }
-
-  function pauseGame() {
-    setStart(!start);
-    setPause(!pause);
-    setTurn(!turn);
-  }
-
-  function restartGame() {
+  function resetGame() {
     setStart(false);
     setPause(false);
     
@@ -126,20 +120,20 @@ function AIvsAI(): JSX.Element {
         {
           !start ? 
             <Button
-              onClick={startGame}
+              onClick={() => { togglePlay(true, false, !turn) }}
               variant="outlined"
             >
               Start
             </Button>
-          : <Button variant="outlined" onClick={pauseGame}>Pause</Button>
+          : <Button variant="outlined" onClick={() => { togglePlay(!start, !pause, !turn) }}>Pause</Button>
         }
           <Button variant="outlined" onClick={() => {navigate("/")}}>
               Home
             </Button>
-          <Button variant="outlined" onClick={restartGame}>Restart</Button>
+          <Button variant="outlined" onClick={resetGame}>Reset</Button>
         </div>
     </div>
   );
 }
 
-export default AIvsAI;
+export default AIGame;
