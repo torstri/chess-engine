@@ -16,6 +16,7 @@ function AIGame(): JSX.Element {
   const [turn, setTurn] = useState<boolean>(false);  // white: true, black: false
   const [pause, setPause] = useState<boolean>(false);
   const navigate = useNavigate();
+  const turnDuration = 200;
 
   useEffect(() => {
 
@@ -45,7 +46,7 @@ function AIGame(): JSX.Element {
 
       setTimeout(() => {
         setTurn(!turn);
-      }, 200);
+      }, turnDuration);
     }
   }, [turn, pause]);
   
@@ -58,8 +59,19 @@ function AIGame(): JSX.Element {
       return false;
     }
 
-    const move = turn ? whiteBot?.makeMove(game) : blackBot?.makeMove(game);
-    return moveUpdate(move);
+    try {
+
+      const move = turn ? whiteBot?.makeMove(game) : blackBot?.makeMove(game);
+      console.log(move);
+      return moveUpdate(move);
+
+    } catch(e) {
+
+      console.error(e);
+      return false;
+    
+    }
+
   }
 
   function playRandomMove(): boolean {
