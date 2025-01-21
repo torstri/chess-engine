@@ -62,23 +62,6 @@ function AIGame(): JSX.Element {
     }
   }, [turn, pause, start, gameFEN]); // Add relevant dependencies
 
-  useEffect(() => {
-    console.log("In game over use effect");
-    if (gameOver) {
-      updateScoreBoard();
-      setGamesPlayed((gp) => {
-        if (gp + 1 < numberOfGames) {
-          setGameOver(false);
-          resetGame();
-          togglePlay(true, false, true);
-          return gp + 1;
-        }
-        return 0;
-      });
-      setGameOver(false);
-    }
-  }, [gameOver]);
-
   function updateScoreBoard() {
     if (game.isDraw()) {
       console.log("Draw!");
@@ -96,11 +79,23 @@ function AIGame(): JSX.Element {
     }
   }
 
+  function handleGameOver(): boolean {
+    updateScoreBoard();
+    setGamesPlayed((gp) => {
+      if (gp + 1 < numberOfGames) {
+        setGameOver(false);
+        resetGame();
+        togglePlay(true, false, true);
+        return gp + 1;
+      }
+      return 0;
+    });
+    return false;
+  }
+
   function playNextMove(): boolean {
     if (game.isGameOver()) {
-      console.log("Game Over");
-      setGameOver(false);
-      return false;
+      return handleGameOver();
     }
 
     try {
@@ -115,9 +110,7 @@ function AIGame(): JSX.Element {
 
   function playRandomMove(): boolean {
     if (game.isGameOver()) {
-      console.log("Game Over");
-      setGameOver(true);
-      return false;
+      return handleGameOver();
     }
 
     var possibleMoves = game.moves({ verbose: true });
@@ -201,11 +194,11 @@ function AIGame(): JSX.Element {
           onChange={(e) => {
             setNumberOfGames(Number(e.target.value));
           }}
-          min="0"
+          min="1"
         />
       </div>
-      <div>SCORE BOARD</div>
-      <TableContainer component={Paper} sx={{ width: "800px" }}>
+      <span style={{padding: "10px"}}>Games Played: {gamesPlayed}</span>
+      <TableContainer component={Paper} sx={{ width: "800px"}}>
         <Table sx={{ minWidth: 650 }} aria-label="simple table">
           <TableHead>
             <TableRow>
@@ -213,6 +206,7 @@ function AIGame(): JSX.Element {
               <TableCell align="right">Wins</TableCell>
               <TableCell align="right">Draws</TableCell>
               <TableCell align="right">Losses</TableCell>
+              <TableCell align="right">Win Rate</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -221,12 +215,18 @@ function AIGame(): JSX.Element {
               <TableCell align="right">{whiteWins}</TableCell>
               <TableCell align="right">{draws}</TableCell>
               <TableCell align="right">{blackWins}</TableCell>
+              <TableCell align="right">{(whiteWins / (whiteWins + blackWins + draws)) > 0 ? 
+                                        (whiteWins / (whiteWins + blackWins + draws)) * 100
+                                        : 0}%</TableCell>
             </TableRow>
             <TableRow>
               <TableCell>Black</TableCell>
               <TableCell align="right">{blackWins}</TableCell>
               <TableCell align="right">{draws}</TableCell>
               <TableCell align="right">{whiteWins}</TableCell>
+              <TableCell align="right">{(blackWins / (whiteWins + blackWins + draws)) > 0 ? 
+                                        (blackWins / (whiteWins + blackWins + draws)) * 100
+                                        : 0}%</TableCell>
             </TableRow>
           </TableBody>
         </Table>
