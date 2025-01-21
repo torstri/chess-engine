@@ -33,6 +33,7 @@ function AIGame(): JSX.Element {
   const [whiteWins, setwhiteWins] = useState<number>(0);
   const [blackWins, setBlackWins] = useState<number>(0);
   const [draws, setDraws] = useState<number>(0);
+
   const navigate = useNavigate();
   const turnDuration = 20;
 
@@ -134,6 +135,16 @@ function AIGame(): JSX.Element {
     return true;
   }
 
+  function getWinRate(color: string): number {
+
+    if (color == Player.White) {
+      return Math.round(whiteWins / (whiteWins + blackWins + draws) * 100)
+    } else {
+      return Math.round(blackWins / (whiteWins + blackWins + draws) * 100)
+    }
+    
+  }
+
   function togglePlay(start: boolean, pause: boolean, turn: boolean) {
     setStart(start);
     setPause(pause);
@@ -191,6 +202,7 @@ function AIGame(): JSX.Element {
           id="gameInput"
           type="number"
           value={numberOfGames}
+          disabled={start}
           onChange={(e) => {
             setNumberOfGames(Number(e.target.value));
           }}
@@ -212,21 +224,21 @@ function AIGame(): JSX.Element {
           <TableBody>
             <TableRow>
               <TableCell>White</TableCell>
-              <TableCell align="right">{whiteWins}</TableCell>
-              <TableCell align="right">{draws}</TableCell>
-              <TableCell align="right">{blackWins}</TableCell>
-              <TableCell align="right">{(whiteWins / (whiteWins + blackWins + draws)) > 0 ? 
-                                        (whiteWins / (whiteWins + blackWins + draws)) * 100
-                                        : 0}%</TableCell>
+              <TableCell align="right">{ whiteWins }</TableCell>
+              <TableCell align="right">{ draws }</TableCell>
+              <TableCell align="right">{ blackWins }</TableCell>
+              <TableCell align="right">{ whiteWins + blackWins + draws != 0 ? 
+                                        getWinRate(Player.White)
+                                        : 0 }%</TableCell>
             </TableRow>
             <TableRow>
               <TableCell>Black</TableCell>
-              <TableCell align="right">{blackWins}</TableCell>
-              <TableCell align="right">{draws}</TableCell>
-              <TableCell align="right">{whiteWins}</TableCell>
-              <TableCell align="right">{(blackWins / (whiteWins + blackWins + draws)) > 0 ? 
-                                        (blackWins / (whiteWins + blackWins + draws)) * 100
-                                        : 0}%</TableCell>
+              <TableCell align="right">{ blackWins }</TableCell>
+              <TableCell align="right">{ draws }</TableCell>
+              <TableCell align="right">{ whiteWins }</TableCell>
+              <TableCell align="right">{ whiteWins + blackWins + draws != 0 ? 
+                                        getWinRate(Player.Black)
+                                        : 0 }%</TableCell>
             </TableRow>
           </TableBody>
         </Table>
