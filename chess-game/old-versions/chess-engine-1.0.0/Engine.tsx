@@ -1,21 +1,22 @@
 import { Chess, Move } from "chess.js";
 import { Node } from "./Node";
+import { State } from "./State";
 
 enum Turn {
-  White = 'w',
-  Black = 'b',
+  White = "w",
+  Black = "b",
 }
 
 // Constants
 const C = 2;
 const MAXDEPTH = 100;
-const pieceValue = { 
-  'p': 1,
-  'n': 3,
-  'b': 3,
-  'r': 5,
-  'q': 9,
-  'k': 0,
+const pieceValue = {
+  p: 1,
+  n: 3,
+  b: 3,
+  r: 5,
+  q: 9,
+  k: 0,
 };
 
 // interface PieceInterface {
@@ -41,13 +42,14 @@ const pieceValue = {
 // }
 
 // Monte Carlo Tree Search
-export function mcts(root: Node): string | undefined {
+export function mcts(game: Chess): string | undefined {
+  this.root = new Node(new State(game.fen()), Node.getPlayer(), 0);
 
   console.log("Thinking..");
 
-  const startTime = Date.now(); 
+  const startTime = Date.now();
   const duration = 4000;
-  let current: Node = root;
+  let current: Node = this.root;
   current.visits++;
 
   while (Date.now() - startTime < duration) {
@@ -69,31 +71,29 @@ export function mcts(root: Node): string | undefined {
       } else {
         throw new Error("No child found");
       }
-
     } else if (current.visits > 0) {
       // Node expansion phase
       current.nodeExpansion();
     } else {
-        // Rollout
-        propogate(current, rollout(new Chess(current.state.fen)));
-        
-        current = root;
+      // Rollout
+      propogate(current, rollout(new Chess(current.state.fen)));
+
+      current = this.root;
     }
   }
 
-  return getOptimalMove(root);
+  return getOptimalMove(this.root);
 }
-
 
 function getOptimalMove(root: Node): string | undefined {
   let move: string | undefined = undefined;
   let maxScore = -Infinity;
   root.children.forEach((child: Node) => {
-    if(child.state.totalScore > maxScore) {
+    if (child.state.totalScore > maxScore) {
       move = child.move;
       maxScore = child.state.totalScore;
-    } 
-  })
+    }
+  });
   return move;
 }
 
@@ -106,19 +106,17 @@ function propogate(leaf: Node, score: number): void {
 }
 
 function rollout(game: Chess): number {
-  if(game.isGameOver()) return evaluateState(game, Node.getPlayer());
+  if (game.isGameOver()) return evaluateState(game, Node.getPlayer());
 
-  const randomIndex = Math.floor(Math.random() * game.moves().length); 
+  const randomIndex = Math.floor(Math.random() * game.moves().length);
   const randomMove = game.moves()[randomIndex];
-  
+
   try {
     game.move(randomMove);
-  } catch(e) {
+  } catch (e) {
     console.error("MOVE: ", randomMove);
     throw new Error("INVALID MOVE");
   }
-  
-
 
   return rollout(game);
 }
@@ -127,21 +125,21 @@ function ucb1(score: number, N: number, n: number): number {
   // ucb: average value of state + constant * sqrt(ln(times visited parent) / number of visits of this node)
   // constant choosen to balance the explotation term and the exploration term
   // explotation term: V_i (average value of state)
-  // exploration term: n_i, number of visits of this node 
+  // exploration term: n_i, number of visits of this node
 
-  if(n == 0 || N == 0) return Infinity;
+  if (n == 0 || N == 0) return Infinity;
 
-  return (score / n) + C * Math.sqrt(Math.log(N) / n);
+  return score / n + C * Math.sqrt(Math.log(N) / n);
 }
 
 function evaluateState(game: Chess, player: string): number {
-  // const scoreWhite = getTotalPiecesOnBoard(game, Turn.White);  
+  // const scoreWhite = getTotalPiecesOnBoard(game, Turn.White);
   // const scoreBlack = getTotalPiecesOnBoard(game, Turn.Black);
 
   // const diff = (scoreBlack - scoreWhite);
   let win;
 
-  if(game.isCheckmate()) {
+  if (game.isCheckmate()) {
     win = game.turn() == player ? -1 : 1;
   } else {
     win = -0.2;
@@ -154,11 +152,11 @@ function getTotalPiecesOnBoard(game: Chess, color?: string): number {
   let score = 0;
   game.board().forEach((row, rowIdx) => {
     row.forEach((square, colIdx) => {
-      if((color && square && square.color === color) || (!color && square)) {
+      if ((color && square && square.color === color) || (!color && square)) {
         score += pieceValue[square.type];
       }
-    })
-  })
+    });
+  });
 
   return score;
 }
