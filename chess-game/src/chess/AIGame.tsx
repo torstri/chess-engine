@@ -33,6 +33,7 @@ function AIGame(): JSX.Element {
   const [whiteWins, setwhiteWins] = useState<number>(0);
   const [blackWins, setBlackWins] = useState<number>(0);
   const [draws, setDraws] = useState<number>(0);
+
   const navigate = useNavigate();
   const turnDuration = 20;
 
@@ -62,23 +63,6 @@ function AIGame(): JSX.Element {
     }
   }, [turn, pause, start, gameFEN]); // Add relevant dependencies
 
-  useEffect(() => {
-    console.log("In game over use effect");
-    if (gameOver) {
-      updateScoreBoard();
-      setGamesPlayed((gp) => {
-        if (gp + 1 < numberOfGames) {
-          setGameOver(false);
-          resetGame();
-          togglePlay(true, false, true);
-          return gp + 1;
-        }
-        return 0;
-      });
-      setGameOver(false);
-    }
-  }, [gameOver]);
-
   function updateScoreBoard() {
     if (game.isDraw()) {
       console.log("Draw!");
@@ -96,11 +80,23 @@ function AIGame(): JSX.Element {
     }
   }
 
+  function handleGameOver(): boolean {
+    updateScoreBoard();
+    setGamesPlayed((gp) => {
+      if (gp + 1 < numberOfGames) {
+        setGameOver(false);
+        resetGame();
+        togglePlay(true, false, true);
+        return gp + 1;
+      }
+      return 0;
+    });
+    return false;
+  }
+
   function playNextMove(): boolean {
     if (game.isGameOver()) {
-      console.log("Game Over");
-      setGameOver(false);
-      return false;
+      return handleGameOver();
     }
 
     try {
@@ -115,9 +111,7 @@ function AIGame(): JSX.Element {
 
   function playRandomMove(): boolean {
     if (game.isGameOver()) {
-      console.log("Game Over");
-      setGameOver(true);
-      return false;
+      return handleGameOver();
     }
 
     var possibleMoves = game.moves({ verbose: true });
@@ -139,6 +133,16 @@ function AIGame(): JSX.Element {
     }
 
     return true;
+  }
+
+  function getWinRate(color: string): number {
+
+    if (color == Player.White) {
+      return Math.round(whiteWins / (whiteWins + blackWins + draws) * 100)
+    } else {
+      return Math.round(blackWins / (whiteWins + blackWins + draws) * 100)
+    }
+    
   }
 
   function togglePlay(start: boolean, pause: boolean, turn: boolean) {
@@ -198,14 +202,15 @@ function AIGame(): JSX.Element {
           id="gameInput"
           type="number"
           value={numberOfGames}
+          disabled={start}
           onChange={(e) => {
             setNumberOfGames(Number(e.target.value));
           }}
-          min="0"
+          min="1"
         />
       </div>
-      <div>SCORE BOARD</div>
-      <TableContainer component={Paper} sx={{ width: "800px" }}>
+      <span style={{padding: "10px"}}>Games Played: {gamesPlayed}</span>
+      <TableContainer component={Paper} sx={{ width: "800px"}}>
         <Table sx={{ minWidth: 650 }} aria-label="simple table">
           <TableHead>
             <TableRow>
@@ -213,20 +218,27 @@ function AIGame(): JSX.Element {
               <TableCell align="right">Wins</TableCell>
               <TableCell align="right">Draws</TableCell>
               <TableCell align="right">Losses</TableCell>
+              <TableCell align="right">Win Rate</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             <TableRow>
               <TableCell>White</TableCell>
-              <TableCell align="right">{whiteWins}</TableCell>
-              <TableCell align="right">{draws}</TableCell>
-              <TableCell align="right">{blackWins}</TableCell>
+              <TableCell align="right">{ whiteWins }</TableCell>
+              <TableCell align="right">{ draws }</TableCell>
+              <TableCell align="right">{ blackWins }</TableCell>
+              <TableCell align="right">{ whiteWins + blackWins + draws != 0 ? 
+                                        getWinRate(Player.White)
+                                        : 0 }%</TableCell>
             </TableRow>
             <TableRow>
               <TableCell>Black</TableCell>
-              <TableCell align="right">{blackWins}</TableCell>
-              <TableCell align="right">{draws}</TableCell>
-              <TableCell align="right">{whiteWins}</TableCell>
+              <TableCell align="right">{ blackWins }</TableCell>
+              <TableCell align="right">{ draws }</TableCell>
+              <TableCell align="right">{ whiteWins }</TableCell>
+              <TableCell align="right">{ whiteWins + blackWins + draws != 0 ? 
+                                        getWinRate(Player.Black)
+                                        : 0 }%</TableCell>
             </TableRow>
           </TableBody>
         </Table>
