@@ -197,28 +197,27 @@ export class ChessAI {
   }
 
   rollout(game: Chess, depth: number): number {
-    let tempGame = game;
-    if (tempGame.isGameOver()) {
-      return this.evaluateTerminalState(tempGame);
+    if (game.isGameOver()) {
+      return this.evaluateTerminalState(game);
     }
 
     if (depth > MAX_DEPTH) {
-      // const wSum = this.evaluateMaterial(tempGame, Player.White);
-      // const bSum = this.evaluateMaterial(tempGame, Player.Black);
-      return this.evaluation(tempGame, tempGame.turn());
+      // const wSum = this.evaluateMaterial(game, Player.White);
+      // const bSum = this.evaluateMaterial(game, Player.Black);
+      return this.evaluation(game, game.turn());
     }
 
-    const randomIndex = Math.floor(Math.random() * tempGame.moves().length);
-    const randomMove = tempGame.moves()[randomIndex];
+    const randomIndex = Math.floor(Math.random() * game.moves().length);
+    const randomMove = game.moves()[randomIndex];
 
     try {
-      tempGame.move(randomMove);
+      game.move(randomMove);
     } catch (e) {
       console.error("MOVE: ", randomMove);
       throw new Error("INVALID MOVE");
     }
 
-    return this.rollout(tempGame, depth + 1);
+    return this.rollout(game, depth + 1);
   }
 
   ucb1(score: number, N: number, n: number): number {
