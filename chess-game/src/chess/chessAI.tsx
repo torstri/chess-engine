@@ -9,9 +9,9 @@ enum Player {
 
 // Constants
 const C = 2;
-const MAXDEPTH = 3;
-const duration = 100;
-const totPieceValue = 39;
+const MAX_DEPTH = 10;
+const ALLOWED_DURATION = 500;
+const TOTAL_PIECE_VALUE = 39;
 export const pieceValue = {
   p: 1,
   n: 3,
@@ -40,8 +40,8 @@ export class ChessAI {
 
     const startTime = Date.now();
     let current: Node = this.root;
-
-    while (Date.now() - startTime < duration) {
+    let evaluation = -10;
+    while (Date.now() - startTime < ALLOWED_DURATION) {
       // Tree traversal phase
       if (!current.isLeaf()) {
         current = this.getMaxUCBnode(current);
@@ -56,6 +56,7 @@ export class ChessAI {
       }
     }
 
+    // console.log("Evaluation: ", this.root.state.totalScore);
     return this.getBestMove(this.root);
   }
 
@@ -72,7 +73,11 @@ export class ChessAI {
 
     if (!move) throw new Error("No move found");
 
-    // console.log("MAX SCORE", maxScore);
+    const visits = this.root?.visits;
+    const score = this.root?.state.totalScore;
+    if (visits && score) {
+      console.log("Evaluation of position: ", score / visits);
+    }
 
     return move;
   }
@@ -109,12 +114,12 @@ export class ChessAI {
   }
 
   rollout(game: Chess, depth: number): number {
-    if (game.isGameOver()) return this.evaluateState(game);
+    if (game.isGameOver()) return this.evaluateTerminalState(game);
 
-    if (depth > MAXDEPTH) {
-      const wSum = this.getSumPieceValue(game, Player.White);
-      const bSum = this.getSumPieceValue(game, Player.Black);
-      return (wSum - bSum) / totPieceValue;
+    if (depth > MAX_DEPTH) {
+      // const wSum = this.evaluateMaterial(game, Player.White);
+      // const bSum = this.evaluateMaterial(game, Player.Black);
+      return this.evaluation(game, game.turn());
     }
 
     const randomIndex = Math.floor(Math.random() * game.moves().length);
@@ -141,28 +146,158 @@ export class ChessAI {
     return score / n + C * Math.sqrt(Math.log(N) / n);
   }
 
-  evaluateState(game: Chess): number {
-    // const scoreWhite = getSumPieceValue(game, Turn.White);
-    // const scoreBlack = getSumPieceValue(game, Turn.Black);
-
-    // const diff = (scoreBlack - scoreWhite);
-    let win;
-
+  // Returns draw ? 0 : loss ? -5 : 5
+  evaluateTerminalState(game: Chess): number {
+    // A terminal state is either checkmate or a draw
+    let win = 0;
     if (game.isCheckmate()) {
-      win = game.turn() == Node.getPlayer() ? -2 : 2;
-    } else {
-      win = 1;
+      // Should this not be this.root.getPlayer()
+      win = game.turn() == Node.getPlayer() ? -100 : 100;
     }
-
     return win;
   }
 
-  getSumPieceValue(game: Chess, color?: string): number {
+  evaluation(game: Chess, color: string): number {
+    const whiteMobility = this.evaluateMobility(game, Player.White);
+    const blackMobility = this.evaluateMobility(game, Player.Black);
+
+    // Normalize
+    const mobilityScore =
+      color === Player.White
+        ? whiteMobility - blackMobility
+        : blackMobility - whiteMobility;
+
+    const whiteMaterial = this.evaluateMaterial(game, Player.White);
+    const blackMaterial = this.evaluateMaterial(game, Player.Black);
+
+    const materialScore =
+      color === Player.White
+        ? whiteMaterial - blackMaterial
+        : blackMaterial - whiteMaterial;
+
+    const whiteThreats = this.evaluateThreats(game, Player.White);
+    const blackThreats = this.evaluateThreats(game, Player.Black);
+    const threatEvaluation =
+      color === Player.White
+        ? whiteThreats - blackThreats
+        : blackThreats - whiteThreats;
+
+    return 0.5 * mobilityScore + materialScore + 0.3 * threatEvaluation;
+  }
+
+  // Right now this probably favours aggressive players
+  // Returns number of squares we defend + number of squares we attack
+  evaluateMobility(game: Chess, color: string): number {
+    // To evaluate mobility we consider two things:
+    // 1. Squares we attack and 2. squares we defend
+
+    // 1. Squares we attack we can find through game.moves ezpz
+    // 2. Squares we defend is trickier so we iterate over all squares
+    // If we are attacking the square, but it is not included in game.moves()
+    // -> we are occupying it i.e. we are defending it
+
+    // Lastly, game.moves() only works if param color is the one to move
+    // so we change the game if we are not the one to move
+
+    // Map to store all squares we are attacking
+    const attackedSquaresMap: { [key: string]: number } = {};
+
+    let attackedSquares = 0; // Keeps track of our legal moves
+
+    // If the passed color is not the one to move we need to change the game
+    // in order to utilize game.move()
+    if (game.turn() !== this.player) {
+      // FEN: "row/row/row/row/row/row/row/row ActiveColor CastlingRights EnPassantTargetSquare Half-MoveClock Full-MoveClock"
+      let gameFen = game.fen();
+      let fenParts = gameFen.split(" ");
+
+      // Switch turn in the FEN (index 1 contains turn)
+      fenParts[1] = color; // Set the turn to the desired color
+
+      // Construct new FEN
+      let newFen = fenParts.join(" ");
+
+      // Create a new instance of the game to avoid mutating the original
+      let newGame = new Chess();
+
+      try {
+        newGame.load(newFen);
+      } catch (error) {
+        newGame = game;
+        const randomIndex = Math.floor(Math.random() * game.moves().length);
+        const randomMove = newGame.moves()[randomIndex];
+        newGame.move(randomMove);
+      }
+      // We check all of the moves possible
+      // We use verbose since this returns
+      // piece, from and to, and we want to see which square we are attacking
+      newGame.moves({ verbose: true }).forEach((move) => {
+        attackedSquaresMap[move.to] = attackedSquaresMap[move.to]
+          ? 1
+          : attackedSquaresMap[move.to] + 1;
+        attackedSquares++;
+      });
+    } else {
+      game.moves({ verbose: true }).forEach((move) => {
+        attackedSquaresMap[move.to] = attackedSquaresMap[move.to]
+          ? 1
+          : attackedSquaresMap[move.to] + 1;
+        attackedSquares++;
+      });
+    }
+    // THIS MIGHT BE INCORRECT:
+    // game.isAttacked(square, color) returns true even if we are pinned
+    // if we are pinned then it will not be a legal move
+    // this could be checked with a try catch block
+    // since game.move(pinned_piece) will throw an exception
+
+    // Iterate over all squares
+    // If we are attacking a square but it is not one of our legal moves,
+    // then we are defending the piece
+    // Sum these up
+    let defendedSquares = 0;
+    game.board().forEach((row) => {
+      row.forEach((square) => {
+        if (square?.square && color === square.color) {
+          if (!attackedSquaresMap[square.square]) {
+            // I do not know if we can do like this
+            defendedSquares += game.isAttacked(square.square, square.color)
+              ? 1 * pieceValue[square.type]
+              : 0;
+          }
+        }
+      });
+    });
+
+    return defendedSquares + attackedSquares;
+  }
+
+  evaluateThreats(game: Chess, color: string): number {
+    let threatenedSquares = 0;
+    let enemyColor = color === Player.White ? Player.Black : Player.White;
+    game.board().forEach((row) => {
+      row.forEach((square) => {
+        if (square?.color === color) {
+          if (game.isAttacked(square.square, enemyColor)) {
+            threatenedSquares++;
+          }
+        }
+      });
+    });
+    return threatenedSquares;
+  }
+
+  evaluateMaterial(game: Chess, color?: string): number {
     let score = 0;
     game.board().forEach((row) => {
       row.forEach((square) => {
+        // What does the second part of the if do?
         if ((color && square && square.color === color) || (!color && square)) {
-          score += pieceValue[square.type];
+          // We want to add up the value of the pieces
+          // However we should not add if we are looking at the king, since he is worth 99
+          if (square.type !== "k") {
+            score += pieceValue[square.type];
+          }
         }
       });
     });
