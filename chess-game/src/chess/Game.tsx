@@ -3,10 +3,9 @@ import { Chess, Move } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Square } from "react-chessboard/dist/chessboard/types";
 import { ChessAI } from "./chessAI";
-import Button from '@mui/material/Button';
-import { useNavigate } from 'react-router-dom';
+import Button from "@mui/material/Button";
+import { useNavigate } from "react-router-dom";
 import "../CSS/Game.css";
-
 
 // Define the type for the modify function used in safeGameMutate
 type ModifyFunction = (game: Chess) => void;
@@ -15,7 +14,9 @@ function Game(): JSX.Element {
   const [game, setGame] = useState<Chess>(new Chess());
   const [gameFEN, setGameFEN] = useState<string>(game.fen());
   const [selectedPiece, setSelectedPiece] = useState<string>();
-  const [selectedSquare, setSelectedSquare] = useState<Square | undefined>(undefined);
+  const [selectedSquare, setSelectedSquare] = useState<Square | undefined>(
+    undefined
+  );
   const [sourceSelected, setSrcSelected] = useState<boolean>();
   const [m, setMove] = useState<Move | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(false);
@@ -38,13 +39,12 @@ function Game(): JSX.Element {
 
   useEffect(() => {
     setChessBot(() => {
-      return new ChessAI(game, 'b');
+      return new ChessAI(game, "b");
     });
   }, []);
 
   function computeMove(): boolean {
-
-    if(game.isGameOver()) {
+    if (game.isGameOver()) {
       console.log("Game Over");
       setLoading(false);
       return false;
@@ -115,7 +115,6 @@ function Game(): JSX.Element {
   }
 
   function resetGame() {
-
     setSelectedSquare(undefined);
     setSelectedPiece(undefined);
     setSrcSelected(false);
@@ -125,20 +124,33 @@ function Game(): JSX.Element {
     setGameFEN(game.fen());
 
     setChessBot(() => {
-      return new ChessAI(game, 'b');
+      return new ChessAI(game, "b");
     });
   }
 
   return (
     <div className="container">
-      <Chessboard
-        position={gameFEN}
-        onSquareClick={handleSquareClick}
-      />
+      <Chessboard position={gameFEN} onSquareClick={handleSquareClick} />
       <div className="button-group">
-        <Button variant="outlined" disabled={loading} onClick={resetGame}>Restart</Button>
-        <Button variant="outlined" disabled={loading} onClick={() => { navigate("/"); }}>Home</Button>
+        <Button variant="outlined" disabled={loading} onClick={resetGame}>
+          Restart
+        </Button>
+        <Button
+          variant="outlined"
+          disabled={loading}
+          onClick={() => {
+            navigate("/");
+          }}
+        >
+          Home
+        </Button>
       </div>
+      <div>{game.fen()}</div>
+      {chessBot?.root?.state && (
+        <div>
+          Evaluation = {chessBot.root?.state.totalScore / chessBot.root?.visits}
+        </div>
+      )}
     </div>
   );
 }

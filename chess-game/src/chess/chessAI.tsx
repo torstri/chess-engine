@@ -9,9 +9,18 @@ enum Player {
 
 // Constants
 const C = 2;
-const MAX_DEPTH = 10;
-const ALLOWED_DURATION = 500;
+const MAX_DEPTH = 3;
+const ALLOWED_DURATION = 300;
 const TOTAL_PIECE_VALUE = 39;
+
+// Statistics
+let selectionCount = 0;
+let rolloutCount = 0;
+let expansionCount = 0;
+let selectionTime = 0;
+let rolloutTime = 0;
+let expansionTime = 0;
+
 export const pieceValue = {
   p: 1,
   n: 3,
@@ -39,6 +48,7 @@ export class ChessAI {
     // console.log("Thinking...");
 
     const startTime = Date.now();
+    let tempTime = startTime;
     let current: Node = this.root;
     let evaluation = -10;
     while (Date.now() - startTime < ALLOWED_DURATION) {
@@ -47,27 +57,55 @@ export class ChessAI {
         current = this.getMaxUCBnode(current);
       } else if (current.visits > 0) {
         // Node expansion phase
+        tempTime = Date.now();
         current.nodeExpansion();
+        expansionTime += Date.now() - tempTime;
+
+        expansionCount++;
       } else {
         // Rollout
+        tempTime = Date.now();
         this.propogate(current, this.rollout(new Chess(current.state.fen), 0));
+        rolloutTime += Date.now() - tempTime;
+        rolloutCount++;
 
         current = this.root;
       }
     }
 
     // console.log("Evaluation: ", this.root.state.totalScore);
+    console.log(
+      "Rollouts: ",
+      rolloutCount,
+      ". Average time spent on rollouts: ",
+      rolloutTime / rolloutCount
+    );
+    console.log(
+      "Expansions: ",
+      expansionCount,
+      ". Average time spent on expansions: ",
+      expansionTime / expansionCount
+    );
+    this.consoleLogs(game, this.player);
+    rolloutCount = 0;
+    expansionCount = 0;
+    rolloutTime = 0;
+    expansionTime = 0;
+
     return this.getBestMove(this.root);
   }
 
   getBestMove(root: Node): Move {
+    console.log("------------ New Move --------------");
+
     let move: Move | undefined;
     let maxScore = -Infinity;
-
+    let bestChild: Node | undefined;
     root.children.forEach((ch: Node) => {
       if (ch.state.totalScore > maxScore) {
         move = ch.move;
         maxScore = ch.state.totalScore;
+        bestChild = ch;
       }
     });
 
@@ -76,10 +114,55 @@ export class ChessAI {
     const visits = this.root?.visits;
     const score = this.root?.state.totalScore;
     if (visits && score) {
-      console.log("Evaluation of position: ", score / visits);
+      console.log("Best move found: ", move);
+      console.log(
+        "With evaluated position : ",
+        score,
+        " and mean: ",
+        score / visits
+      );
+    }
+    if (this.root?.state?.totalScore && this.root?.visits) {
+      console.log(
+        "Evaluation of given position: ",
+        this.root?.state?.totalScore / this.root?.visits
+      );
     }
 
+    console.log("-------------- End Move --------------");
+
     return move;
+  }
+
+  consoleLogs(game: Chess, color: string) {
+    const whiteMobility = this.evaluateMobility(game, Player.White);
+    const blackMobility = this.evaluateMobility(game, Player.Black);
+
+    // Normalize
+    const mobilityScore =
+      color === Player.White
+        ? whiteMobility - blackMobility
+        : blackMobility - whiteMobility;
+
+    const whiteMaterial = this.evaluateMaterial(game, Player.White);
+    const blackMaterial = this.evaluateMaterial(game, Player.Black);
+
+    const materialScore =
+      color === Player.White
+        ? whiteMaterial - blackMaterial
+        : blackMaterial - whiteMaterial;
+
+    const whiteThreats = this.evaluateThreats(game, Player.White);
+    const blackThreats = this.evaluateThreats(game, Player.Black);
+    const alternatvetTthreatEvaluation =
+      color === Player.White
+        ? blackThreats - whiteThreats
+        : whiteThreats - blackThreats;
+    const threatEvaluation = this.evaluateThreats(game, color);
+    console.log("Mobility Score: ", 0.1 * mobilityScore);
+    console.log("Material Score: ", materialScore);
+    console.log("Threat Score: ", -threatEvaluation);
+    console.log("Alt Threat Score: ", alternatvetTthreatEvaluation);
   }
 
   getMaxUCBnode(node: Node): Node {
@@ -114,25 +197,28 @@ export class ChessAI {
   }
 
   rollout(game: Chess, depth: number): number {
-    if (game.isGameOver()) return this.evaluateTerminalState(game);
-
-    if (depth > MAX_DEPTH) {
-      // const wSum = this.evaluateMaterial(game, Player.White);
-      // const bSum = this.evaluateMaterial(game, Player.Black);
-      return this.evaluation(game, game.turn());
+    let tempGame = game;
+    if (tempGame.isGameOver()) {
+      return this.evaluateTerminalState(tempGame);
     }
 
-    const randomIndex = Math.floor(Math.random() * game.moves().length);
-    const randomMove = game.moves()[randomIndex];
+    if (depth > MAX_DEPTH) {
+      // const wSum = this.evaluateMaterial(tempGame, Player.White);
+      // const bSum = this.evaluateMaterial(tempGame, Player.Black);
+      return this.evaluation(tempGame, tempGame.turn());
+    }
+
+    const randomIndex = Math.floor(Math.random() * tempGame.moves().length);
+    const randomMove = tempGame.moves()[randomIndex];
 
     try {
-      game.move(randomMove);
+      tempGame.move(randomMove);
     } catch (e) {
       console.error("MOVE: ", randomMove);
       throw new Error("INVALID MOVE");
     }
 
-    return this.rollout(game, depth + 1);
+    return this.rollout(tempGame, depth + 1);
   }
 
   ucb1(score: number, N: number, n: number): number {
@@ -151,9 +237,18 @@ export class ChessAI {
     // A terminal state is either checkmate or a draw
     let win = 0;
     if (game.isCheckmate()) {
+      console.log(
+        "Found CHECKMATE state against: ",
+        game.turn(),
+        " evaluated to: ",
+        game.turn() == this.player ? -1000 : 1000
+      );
+
       // Should this not be this.root.getPlayer()
-      win = game.turn() == Node.getPlayer() ? -100 : 100;
+      return game.turn() == this.player ? -1000 : 1000;
     }
+    console.log("Found DRAW");
+
     return win;
   }
 
@@ -179,10 +274,19 @@ export class ChessAI {
     const blackThreats = this.evaluateThreats(game, Player.Black);
     const threatEvaluation =
       color === Player.White
-        ? whiteThreats - blackThreats
-        : blackThreats - whiteThreats;
+        ? blackThreats - whiteThreats
+        : whiteThreats - blackThreats;
+    // const threatEvaluation = this.evaluateThreats(game, color);
 
-    return 0.5 * mobilityScore + materialScore + 0.3 * threatEvaluation;
+    // console.log(
+    //   "Mobility Score: ",
+    //   mobilityScore,
+    //   " Material Score: ",
+    //   materialScore,
+    //   "Threat Evaluation: ",
+    //   threatEvaluation
+    // );
+    return 0.1 * mobilityScore + 2 * materialScore + threatEvaluation;
   }
 
   // Right now this probably favours aggressive players
@@ -272,6 +376,7 @@ export class ChessAI {
     return defendedSquares + attackedSquares;
   }
 
+  // Number of pieces attacked * value of piece
   evaluateThreats(game: Chess, color: string): number {
     let threatenedSquares = 0;
     let enemyColor = color === Player.White ? Player.Black : Player.White;
@@ -279,7 +384,7 @@ export class ChessAI {
       row.forEach((square) => {
         if (square?.color === color) {
           if (game.isAttacked(square.square, enemyColor)) {
-            threatenedSquares++;
+            threatenedSquares += pieceValue[square.type];
           }
         }
       });
