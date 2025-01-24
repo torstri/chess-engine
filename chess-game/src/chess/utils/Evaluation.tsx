@@ -1,5 +1,5 @@
 import { Chess, Move, PieceSymbol } from "chess.js";
-import { stateBias } from "./types";
+import { stateBias } from "./Types";
 import { pieceValue } from "./Constants";
 import { PSQT, getSquareInTable } from "./PSQT";
 
