@@ -9,8 +9,8 @@ enum Player {
 
 // Constants
 const C = 2;
-const MAX_DEPTH = 3;
-const ALLOWED_DURATION = 300;
+const MAX_DEPTH = 5;
+const ALLOWED_DURATION = 1500;
 const TOTAL_PIECE_VALUE = 39;
 
 // Statistics
@@ -234,13 +234,12 @@ export class ChessAI {
   // Returns draw ? 0 : loss ? -5 : 5
   evaluateTerminalState(game: Chess): number {
     // A terminal state is either checkmate or a draw
-    let win = 0;
     if (game.isCheckmate()) {
       console.log(
         "Found CHECKMATE state against: ",
         game.turn(),
-        " evaluated to: ",
-        game.turn() == this.player ? -1000 : 1000
+        ". evaluated to: ",
+        game.turn() === this.player ? -1000 : 1000
       );
 
       // Should this not be this.root.getPlayer()
@@ -248,9 +247,11 @@ export class ChessAI {
     }
     console.log("Found DRAW");
 
-    return win;
+    return 0;
   }
 
+  // Main method for evaluating a state given a Chess object
+  // and which color the evaluation is being done for
   evaluation(game: Chess, color: string): number {
     const whiteMobility = this.evaluateMobility(game, Player.White);
     const blackMobility = this.evaluateMobility(game, Player.Black);
@@ -285,7 +286,7 @@ export class ChessAI {
     //   "Threat Evaluation: ",
     //   threatEvaluation
     // );
-    return 0.1 * mobilityScore + 2 * materialScore + threatEvaluation;
+    return 0.1 * mobilityScore + 2 * materialScore + 0.5 * threatEvaluation;
   }
 
   // Right now this probably favours aggressive players
