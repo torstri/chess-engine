@@ -12,8 +12,8 @@ export class State {
       this.totalScore += score;
     }
   
-    possibleMoves(): string[] {
-      return new Chess(this.fen).moves();
+    possibleMoves(): Move[] {
+      return new Chess(this.fen).moves({verbose: true});
     }
   
     getGameObj(): Chess {

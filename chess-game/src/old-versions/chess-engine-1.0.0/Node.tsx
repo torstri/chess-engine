@@ -9,12 +9,12 @@ export class Node {
     turn: string;
     depth: number;
     parent: Node | undefined;
-    move: string | undefined;
+    move: Move | undefined;
     visits: number;
     // Maybe hashmap is better suited
     children: Node[] = [];
   
-    constructor(state: State, turn: string, depth: number, parent?: Node, move?: string) {
+    constructor(state: State, turn: string, depth: number, parent?: Node, move?: Move) {
       this.state = state;
       this.turn = turn;
       this.depth = depth;
@@ -35,14 +35,14 @@ export class Node {
       return this.state.possibleMoves.length;
     }
   
-    moves(): string[] {
+    moves(): Move[] {
       return this.state.possibleMoves();
     }
   
     visited(): void { this.visits++; }
   
     nodeExpansion() {
-      this.state.possibleMoves().forEach((move: string) => {
+      this.state.possibleMoves().forEach((move: Move) => {
         const gameCopy = new Chess(this.state.fen);
         gameCopy.move(move);
         this.addChild(
@@ -53,7 +53,7 @@ export class Node {
       });
     }
   
-    addChild(state: State, turn: string, move: string): Node {
+    addChild(state: State, turn: string, move: Move): Node {
       // This might become really weird
       const child = new Node(state, turn, this.depth + 1, this, move);
       this.children.push(child);

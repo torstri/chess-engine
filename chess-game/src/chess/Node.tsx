@@ -1,9 +1,9 @@
 import { Chess, Move } from "chess.js";
 import { State } from "./State";
+import { evaluateState } from "./utils/Evaluation";
 
 // Node class for representing game states
 export class Node {
-    static player: string;
   
     state: State;
     turn: string;
@@ -22,14 +22,6 @@ export class Node {
       this.visits = 0;
     }
   
-    static setPlayer(player: string): void {
-      Node.player = player;
-    }
-  
-    static getPlayer(): string {
-      return Node.player;
-    }
-  
     numMoves(): number {
       return this.state.possibleMoves.length;
     }
@@ -38,21 +30,19 @@ export class Node {
       return this.state.possibleMoves();
     }
   
-    nodeExpansion() {
+    nodeExpansion(player: string) {
       this.state.possibleMoves().forEach((move: Move) => {
         const gameCopy = new Chess(this.state.fen);
         gameCopy.move(move);
         this.addChild(
-          new State(gameCopy.fen()),
-          gameCopy,
+          new State(gameCopy.fen(), evaluateState(gameCopy, player, move)),
           gameCopy.turn(),
           move
         );
       });
     }
   
-    addChild(state: State, game: Chess, turn: string, move: Move): Node {
-      state.totalScore += state.addStateScoreBias(game, move, Node.getPlayer());
+    addChild(state: State, turn: string, move: Move): Node {
       const child = new Node(state, turn, this.depth + 1, this, move);
       this.children.push(child);
       return child;

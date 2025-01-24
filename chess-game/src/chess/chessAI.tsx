@@ -1,11 +1,6 @@
-import { Chess, Move, PieceSymbol } from "chess.js";
+import { Chess, Move, PieceSymbol} from "chess.js";
 import { Node } from "./Node";
 import { State } from "./State";
-
-enum Player {
-  White = "w",
-  Black = "b",
-}
 
 // Constants
 const C = 2;
@@ -21,15 +16,8 @@ let selectionTime = 0;
 let rolloutTime = 0;
 let expansionTime = 0;
 
-export const pieceValue = {
-  p: 1,
-  n: 3,
-  b: 3,
-  r: 5,
-  q: 9,
-  k: 99,
-  "": 0,
-};
+import { C, MAXDEPTH, duration } from "./utils/Constants";
+import { evaluateTerminalState, sumPieceSquareEvaluation } from "./utils/Evaluation";
 
 export class ChessAI {
   player: string;
@@ -38,12 +26,12 @@ export class ChessAI {
   constructor(game: Chess, player: string) {
     this.player = player;
     this.root = new Node(new State(game.fen()), player, 0);
-    this.root.nodeExpansion();
+    this.root.nodeExpansion(player);
   }
 
   // Monte Carlo Tree Search
   makeMove(game: Chess): Move {
-    this.root = new Node(new State(game.fen()), Node.getPlayer(), 0);
+    this.root = new Node(new State(game.fen()), this.player, 0);
 
     // console.log("Thinking...");
 
@@ -197,14 +185,10 @@ export class ChessAI {
   }
 
   rollout(game: Chess, depth: number): number {
-    if (game.isGameOver()) {
-      return this.evaluateTerminalState(game);
-    }
+    if (game.isGameOver()) return evaluateTerminalState(game, this.player);
 
-    if (depth > MAX_DEPTH) {
-      // const wSum = this.evaluateMaterial(game, Player.White);
-      // const bSum = this.evaluateMaterial(game, Player.Black);
-      return this.evaluation(game, game.turn());
+    if (depth > MAXDEPTH) {
+      return sumPieceSquareEvaluation(game, this.player);
     }
 
     const randomIndex = Math.floor(Math.random() * game.moves().length);
@@ -221,10 +205,6 @@ export class ChessAI {
   }
 
   ucb1(score: number, N: number, n: number): number {
-    // ucb: average value of state + constant * sqrt(ln(times visited parent) / number of visits of this node)
-    // constant choosen to balance the explotation term and the exploration term
-    // explotation term: V_i (average value of state)
-    // exploration term: n_i, number of visits of this node
 
     if (n == 0 || N == 0) return Infinity;
 
@@ -425,10 +405,6 @@ export class ChessAI {
 
   fenToBoardRepresenation(fen: string): void {
     // reference: https://www.youtube.com/watch?v=FsjIJMUIXLI
-    // A1-A8 = 21-28
-    // ...
-    // H1-H8 = 91-98
-    const testFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     console.log("Recieved FEN: ", fen);
     // Step 1: Split the string by spaces to separate the board from the other information
     const fenParts = fen.split(" ");
@@ -458,7 +434,6 @@ export class ChessAI {
     boardLayout.forEach((row, rowIndex) => {
       console.log(`Row ${rowIndex + 1}: ${row}`);
     });
-    const boardRepresentation: number[] = new Array(120).fill(0); // Initializes with 0s
   }
 
   generateMove(): void {}
