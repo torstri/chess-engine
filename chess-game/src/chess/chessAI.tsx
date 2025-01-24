@@ -1,26 +1,8 @@
-import { Chess, Move, PieceSymbol } from "chess.js";
+import { Chess, Move, PieceSymbol} from "chess.js";
 import { Node } from "./Node";
 import { State } from "./State";
-
-enum Player {
-  White = "w",
-  Black = "b",
-}
-
-// Constants
-const C = 2;
-const MAXDEPTH = 3;
-const duration = 100;
-const totPieceValue = 39;
-export const pieceValue = {
-  p: 1,
-  n: 3,
-  b: 3,
-  r: 5,
-  q: 9,
-  k: 99,
-  "": 0,
-};
+import { C, MAXDEPTH, duration } from "./utils/Constants";
+import { evaluateTerminalState, sumPieceSquareEvaluation } from "./utils/Evaluation";
 
 export class ChessAI {
   player: string;
@@ -29,12 +11,12 @@ export class ChessAI {
   constructor(game: Chess, player: string) {
     this.player = player;
     this.root = new Node(new State(game.fen()), player, 0);
-    this.root.nodeExpansion();
+    this.root.nodeExpansion(player);
   }
 
   // Monte Carlo Tree Search
   makeMove(game: Chess): Move {
-    this.root = new Node(new State(game.fen()), Node.getPlayer(), 0);
+    this.root = new Node(new State(game.fen()), this.player, 0);
 
     // console.log("Thinking...");
 
@@ -47,7 +29,7 @@ export class ChessAI {
         current = this.getMaxUCBnode(current);
       } else if (current.visits > 0) {
         // Node expansion phase
-        current.nodeExpansion();
+        current.nodeExpansion(this.player);
       } else {
         // Rollout
         this.propogate(current, this.rollout(new Chess(current.state.fen), 0));
@@ -72,7 +54,7 @@ export class ChessAI {
 
     if (!move) throw new Error("No move found");
 
-    // console.log("MAX SCORE", maxScore);
+    console.log("MAX SCORE", maxScore);
 
     return move;
   }
@@ -109,12 +91,10 @@ export class ChessAI {
   }
 
   rollout(game: Chess, depth: number): number {
-    if (game.isGameOver()) return this.evaluateState(game);
+    if (game.isGameOver()) return evaluateTerminalState(game, this.player);
 
     if (depth > MAXDEPTH) {
-      const wSum = this.getSumPieceValue(game, Player.White);
-      const bSum = this.getSumPieceValue(game, Player.Black);
-      return (wSum - bSum) / totPieceValue;
+      return sumPieceSquareEvaluation(game, this.player);
     }
 
     const randomIndex = Math.floor(Math.random() * game.moves().length);
@@ -131,43 +111,10 @@ export class ChessAI {
   }
 
   ucb1(score: number, N: number, n: number): number {
-    // ucb: average value of state + constant * sqrt(ln(times visited parent) / number of visits of this node)
-    // constant choosen to balance the explotation term and the exploration term
-    // explotation term: V_i (average value of state)
-    // exploration term: n_i, number of visits of this node
 
     if (n == 0 || N == 0) return Infinity;
 
     return score / n + C * Math.sqrt(Math.log(N) / n);
-  }
-
-  evaluateState(game: Chess): number {
-    // const scoreWhite = getSumPieceValue(game, Turn.White);
-    // const scoreBlack = getSumPieceValue(game, Turn.Black);
-
-    // const diff = (scoreBlack - scoreWhite);
-    let win;
-
-    if (game.isCheckmate()) {
-      win = game.turn() == Node.getPlayer() ? -2 : 2;
-    } else {
-      win = 1;
-    }
-
-    return win;
-  }
-
-  getSumPieceValue(game: Chess, color?: string): number {
-    let score = 0;
-    game.board().forEach((row) => {
-      row.forEach((square) => {
-        if ((color && square && square.color === color) || (!color && square)) {
-          score += pieceValue[square.type];
-        }
-      });
-    });
-
-    return score;
   }
 
   getAttackedPiece(game: Chess, move: Move): PieceSymbol | undefined {
@@ -185,10 +132,6 @@ export class ChessAI {
 
   fenToBoardRepresenation(fen: string): void {
     // reference: https://www.youtube.com/watch?v=FsjIJMUIXLI
-    // A1-A8 = 21-28
-    // ...
-    // H1-H8 = 91-98
-    const testFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     console.log("Recieved FEN: ", fen);
     // Step 1: Split the string by spaces to separate the board from the other information
     const fenParts = fen.split(" ");
@@ -218,7 +161,6 @@ export class ChessAI {
     boardLayout.forEach((row, rowIndex) => {
       console.log(`Row ${rowIndex + 1}: ${row}`);
     });
-    const boardRepresentation: number[] = new Array(120).fill(0); // Initializes with 0s
   }
 
   generateMove(): void {}
