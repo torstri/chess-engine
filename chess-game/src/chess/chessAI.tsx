@@ -241,4 +241,8 @@ export class ChessAI {
       expansionTime / expansionCount
     );
   }
+
+  getEvalution(game: Chess) {
+    return evaluateState(game, this.player);
+  }
 }

@@ -24,6 +24,10 @@ export function isEndGame(game: Chess): boolean {
 }
 
 export function evaluateMove(game: Chess, move: Move, player: string): number {
+  if (game.isGameOver()) {
+    return evaluateTerminalState(game, player);
+  }
+
   let moveScore = 0;
 
   if (game.isCheck())
@@ -104,22 +108,26 @@ export function mobiltyEvaluation(
   return playerMobility - opponentMobility;
 }
 
-export function valueOfNewPos(move: Move): number {
+export function valueOfNewPos(move: Move, color: string): number {
   const from = move.from;
   const to = move.to;
   const piece = move.piece;
   const psqt = PSQT_MAP[piece];
 
-  const squareFrom = getSquareInTable(from);
-  const squareTo = getSquareInTable(to);
+  const squareFrom = getSquareInTable(from, color);
+  const squareTo = getSquareInTable(to, color);
   const valueFrom = psqt ? psqt[squareFrom.rowIdx][squareFrom.colIdx] : 0;
   const valueTo = psqt ? psqt[squareTo.rowIdx][squareTo.colIdx] : 0;
 
-  return psqt ? pieceValue[piece] * 0.1 * (valueTo - valueFrom) : 0;
+  return psqt ? pieceValue[piece] + (valueTo - valueFrom) : 0;
 }
 
-export function valueOfSquare(piece: PieceSymbol, square: string): number {
-  const tableIndex = getSquareInTable(square);
+export function valueOfSquare(
+  piece: PieceSymbol,
+  square: string,
+  color: string
+): number {
+  const tableIndex = getSquareInTable(square, color);
   const psqt = PSQT_MAP[piece];
 
   return psqt
@@ -137,10 +145,10 @@ export function evaluateMobility(game: Chess, color: string): number {
 
   game.moves({ verbose: true }).forEach((move) => {
     // value[move.piece] * PSQT(move.to)
-    newPosVal += valueOfNewPos(move);
+    newPosVal += valueOfNewPos(move, move.color);
     if (move.captured) {
       // Value of enemy * PSQT(enemy) + Value of piece * PSQT(move.to) - Value of piece * PSQT(move.from)
-      newPosVal += valueOfSquare(move.captured, move.to);
+      newPosVal += valueOfSquare(move.captured, move.to, move.color);
     }
 
     // Save all squares we can move to with a legal move
@@ -158,7 +166,7 @@ export function evaluateMobility(game: Chess, color: string): number {
           game.isAttacked(square.square, color) &&
           !legalMovesMap[square.square]
         ) {
-          defenseValue += valueOfSquare(square.type, square.square);
+          defenseValue += valueOfSquare(square.type, square.square, color);
         }
       }
     });
@@ -170,17 +178,37 @@ export function evaluateMobility(game: Chess, color: string): number {
 export function materialEvaluation(game: Chess, player: string): number {
   let playerScore = 0;
   let opponentScore = 0;
+  let opponentCount = 0;
+  let playerCount = 0;
   game.board().forEach((row) => {
     row.forEach((square) => {
       if (square && square.color == player) {
-        playerScore += valueOfSquare(square.type, square.square);
+        playerScore += valueOfSquare(square.type, square.square, square.color);
+        playerCount++;
       } else if (square) {
-        opponentScore -= valueOfSquare(square.type, square.square);
+        opponentScore -= valueOfSquare(
+          square.type,
+          square.square,
+          square.color
+        );
+        opponentCount++;
       }
     });
   });
-
-  return playerScore - opponentScore;
+  // console.log(
+  //   "Player Count:",
+  //   playerCount,
+  //   " and Opponent Count: ",
+  //   opponentCount
+  // );
+  // console.log(
+  //   "Player Score: ",
+  //   playerScore,
+  //   " Opponent score: ",
+  //   opponentScore
+  // );
+  // console.log("Result: ", playerScore + opponentScore);
+  return playerScore + opponentScore;
 }
 
 // export function threatEvaluation(game: Chess, color: string): number {

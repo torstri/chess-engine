@@ -91,15 +91,24 @@ export const PSQT_MAP: { [key in PieceSymbol]?: number[][] } = {
   q: PSQT.QUEEN,
 };
 
-export function getSquareInTable(square: string): {
+export function getSquareInTable(
+  square: string,
+  color: string
+): {
   rowIdx: number;
   colIdx: number;
 } {
   const file = square.charAt(0);
   const rank = parseInt(square.charAt(1), 10);
-
-  const colIdx = file.charCodeAt(0) - "a".charCodeAt(0);
-  const rowIdx = 8 - rank;
+  const flip = color === "b";
+  let colIdx = file.charCodeAt(0) - "a".charCodeAt(0);
+  // For white, rows are calculated as 8 - rank.
+  // For black, rows are mirrored (rank - 1).
+  let rowIdx = 8 - rank;
+  if (flip) {
+    colIdx = 7 - colIdx;
+    rowIdx = rank - 1;
+  }
 
   return { rowIdx, colIdx };
 }

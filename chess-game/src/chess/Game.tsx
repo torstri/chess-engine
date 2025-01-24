@@ -127,7 +127,15 @@ function Game(): JSX.Element {
       return new ChessAI(game, "b");
     });
   }
+  function runTests() {
+    let testGame = new Chess();
+    testGame.load("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    let testAIWhite = new ChessAI(testGame, "w");
+    let testAIBlack = new ChessAI(testGame, "w");
 
+    console.log("Evaluation White: ", testAIWhite.getEvalution(testGame));
+    console.log("Evaluation Black: ", testAIBlack.getEvalution(testGame));
+  }
   return (
     <div className="container">
       <Chessboard position={gameFEN} onSquareClick={handleSquareClick} />
@@ -151,6 +159,7 @@ function Game(): JSX.Element {
           Evaluation = {chessBot.root?.state.totalScore / chessBot.root?.visits}
         </div>
       )}
+      <Button onClick={runTests}>Run Tests</Button>
     </div>
   );
 }
