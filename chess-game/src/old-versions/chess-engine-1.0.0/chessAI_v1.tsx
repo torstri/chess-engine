@@ -2,14 +2,9 @@ import { Chess, Move } from "chess.js";
 import { Node } from "./Node";
 import { State } from "./State";
 
-enum Turn {
-  White = "w",
-  Black = "b",
-}
-
 // Constants
 const C = 2;
-const MAXDEPTH = 100;
+const MAXDEPTH = 5;
 const pieceValue = {
   p: 1,
   n: 3,
@@ -41,14 +36,25 @@ const pieceValue = {
 //   k = 12, // "k"
 // }
 
-// Monte Carlo Tree Search
-export function mcts(game: Chess): string | undefined {
-  this.root = new Node(new State(game.fen()), Node.getPlayer(), 0);
+export class chessAI_v1 {
 
-  console.log("Thinking..");
+  player: string;
+  root: Node | undefined;
+
+  constructor(game: Chess, player: string) {
+    this.player = player;
+    this.root = new Node(new State(game.fen()), player, 0);
+    this.root.nodeExpansion();
+  }
+
+
+// Monte Carlo Tree Search
+makeMove(game: Chess): Move {
+
+  this.root = new Node(new State(game.fen()), this.player, 0);
 
   const startTime = Date.now();
-  const duration = 4000;
+  const duration = 500;
   let current: Node = this.root;
   current.visits++;
 
@@ -59,7 +65,7 @@ export function mcts(game: Chess): string | undefined {
       let selectedChild: Node | undefined;
 
       current.children.forEach((child: Node) => {
-        const ucb = ucb1(child.state.totalScore, current.visits, child.visits);
+        const ucb = this.ucb1(child.state.totalScore, current.visits, child.visits);
         if (ucb > maxUSB) {
           selectedChild = child;
           maxUSB = ucb;
@@ -76,17 +82,17 @@ export function mcts(game: Chess): string | undefined {
       current.nodeExpansion();
     } else {
       // Rollout
-      propogate(current, rollout(new Chess(current.state.fen)));
+      this.propogate(current, this.rollout(new Chess(current.state.fen)));
 
       current = this.root;
     }
   }
 
-  return getOptimalMove(this.root);
+  return this.getOptimalMove(this.root);
 }
 
-function getOptimalMove(root: Node): string | undefined {
-  let move: string | undefined = undefined;
+getOptimalMove(root: Node): Move {
+  let move: Move | undefined = undefined;
   let maxScore = -Infinity;
   root.children.forEach((child: Node) => {
     if (child.state.totalScore > maxScore) {
@@ -94,10 +100,13 @@ function getOptimalMove(root: Node): string | undefined {
       maxScore = child.state.totalScore;
     }
   });
+
+  if (!move) throw new Error("No move found");
+
   return move;
 }
 
-function propogate(leaf: Node, score: number): void {
+propogate(leaf: Node, score: number): void {
   const path = leaf.getPathToRoot();
   path.forEach((node: Node) => {
     node.state.totalScore += score;
@@ -105,8 +114,8 @@ function propogate(leaf: Node, score: number): void {
   });
 }
 
-function rollout(game: Chess): number {
-  if (game.isGameOver()) return evaluateState(game, Node.getPlayer());
+rollout(game: Chess): number {
+  if (game.isGameOver()) return this.evaluateState(game, this.player);
 
   const randomIndex = Math.floor(Math.random() * game.moves().length);
   const randomMove = game.moves()[randomIndex];
@@ -118,10 +127,10 @@ function rollout(game: Chess): number {
     throw new Error("INVALID MOVE");
   }
 
-  return rollout(game);
+  return this.rollout(game);
 }
 
-function ucb1(score: number, N: number, n: number): number {
+ucb1(score: number, N: number, n: number): number {
   // ucb: average value of state + constant * sqrt(ln(times visited parent) / number of visits of this node)
   // constant choosen to balance the explotation term and the exploration term
   // explotation term: V_i (average value of state)
@@ -132,7 +141,7 @@ function ucb1(score: number, N: number, n: number): number {
   return score / n + C * Math.sqrt(Math.log(N) / n);
 }
 
-function evaluateState(game: Chess, player: string): number {
+evaluateState(game: Chess, player: string): number {
   // const scoreWhite = getTotalPiecesOnBoard(game, Turn.White);
   // const scoreBlack = getTotalPiecesOnBoard(game, Turn.Black);
 
@@ -148,7 +157,7 @@ function evaluateState(game: Chess, player: string): number {
   return win;
 }
 
-function getTotalPiecesOnBoard(game: Chess, color?: string): number {
+getTotalPiecesOnBoard(game: Chess, color?: string): number {
   let score = 0;
   game.board().forEach((row, rowIdx) => {
     row.forEach((square, colIdx) => {
@@ -161,7 +170,7 @@ function getTotalPiecesOnBoard(game: Chess, color?: string): number {
   return score;
 }
 
-export function fenToBoardRepresenation(fen: string): void {
+fenToBoardRepresenation(fen: string): void {
   // reference: https://www.youtube.com/watch?v=FsjIJMUIXLI
   // A1-A8 = 21-28
   // ...
@@ -198,5 +207,5 @@ export function fenToBoardRepresenation(fen: string): void {
   });
   const boardRepresentation: number[] = new Array(120).fill(0); // Initializes with 0s
 }
+}
 
-export function generateMove(): void {}
