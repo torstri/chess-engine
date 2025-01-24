@@ -1,12 +1,9 @@
 import { Chess, Move, PieceSymbol} from "chess.js";
 import { Node } from "./Node";
 import { State } from "./State";
-
-// Constants
-const C = 2;
-const MAX_DEPTH = 5;
-const ALLOWED_DURATION = 1500;
-const TOTAL_PIECE_VALUE = 39;
+import { C, MAXDEPTH, ALLOWED_DURATION, pieceValue } from "./utils/Constants";
+import { evaluateTerminalState, sumPieceSquareEvaluation } from "./utils/Evaluation";
+import { Player } from "./utils/Types";
 
 // Statistics
 let selectionCount = 0;
@@ -16,8 +13,6 @@ let selectionTime = 0;
 let rolloutTime = 0;
 let expansionTime = 0;
 
-import { C, MAXDEPTH, duration } from "./utils/Constants";
-import { evaluateTerminalState, sumPieceSquareEvaluation } from "./utils/Evaluation";
 
 export class ChessAI {
   player: string;
@@ -46,7 +41,7 @@ export class ChessAI {
       } else if (current.visits > 0) {
         // Node expansion phase
         tempTime = Date.now();
-        current.nodeExpansion();
+        current.nodeExpansion(this.player);
         expansionTime += Date.now() - tempTime;
 
         expansionCount++;
