@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Chess, Move } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { ChessAI } from "./chessAI";
-import Button from "@mui/material/Button";
-import { useNavigate } from "react-router-dom";
-import "../CSS/AIGame.css";
+import { chessAI_v1 } from "../old-versions/chess-engine-1.0.0/chessAI_v1";
+import { Player } from "./utils/Types";
+
 
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -13,21 +13,18 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
-
-enum Player {
-  White = "w",
-  Black = "b",
-}
+import Button from "@mui/material/Button";
+import { useNavigate } from "react-router-dom";
+import "../CSS/AIGame.css";
 
 function AIGame(): JSX.Element {
   const [game, setGame] = useState<Chess>(new Chess());
   const [gameFEN, setGameFEN] = useState<string>(game.fen());
-  const [whiteBot, setWhiteBot] = useState<ChessAI>();
-  const [blackBot, setBlackBot] = useState<ChessAI>();
+  const [whiteBot, setWhiteBot] = useState<any>();
+  const [blackBot, setBlackBot] = useState<any>();
   const [start, setStart] = useState<boolean>(false);
   const [turn, setTurn] = useState<boolean>(false); // white: true, black: false
   const [pause, setPause] = useState<boolean>(false);
-  const [gameOver, setGameOver] = useState<boolean>(false);
   const [numberOfGames, setNumberOfGames] = useState<number>(1);
   const [gamesPlayed, setGamesPlayed] = useState<number>(0);
   const [whiteWins, setwhiteWins] = useState<number>(0);
@@ -39,29 +36,26 @@ function AIGame(): JSX.Element {
 
   useEffect(() => {
     setWhiteBot(() => {
-      return new ChessAI(game, "w");
+      return new ChessAI(game, Player.White);
     });
 
     setBlackBot(() => {
-      return new ChessAI(game, "b");
+      return new chessAI_v1(game, Player.Black);
     });
   }, []);
 
   useEffect(() => {
     if (start && !pause) {
       const playMove = async () => {
-        const success = turn ? playNextMove() : playRandomMove();
+        const success = playNextMove();
         if (!success) {
           setStart(false);
-        } else {
-          setGameFEN(game.fen());
-          setTurn((prevTurn) => !prevTurn); // Toggle turn safely
-        }
+        } 
       };
       const timerId = setTimeout(playMove, turnDuration);
-      return () => clearTimeout(timerId); // Cleanup the timer
+      return () => clearTimeout(timerId);
     }
-  }, [turn, pause, start, gameFEN]); // Add relevant dependencies
+  }, [turn, pause, start, gameFEN]);
 
   function updateScoreBoard() {
     if (game.isDraw()) {
@@ -84,7 +78,6 @@ function AIGame(): JSX.Element {
     updateScoreBoard();
     setGamesPlayed((gp) => {
       if (gp + 1 < numberOfGames) {
-        setGameOver(false);
         resetGame();
         togglePlay(true, false, true);
         return gp + 1;
@@ -101,23 +94,11 @@ function AIGame(): JSX.Element {
 
     try {
       const move = turn ? whiteBot?.makeMove(game) : blackBot?.makeMove(game);
-      // console.log(move);
       return moveUpdate(move);
     } catch (e) {
       console.error(e);
       return false;
     }
-  }
-
-  function playRandomMove(): boolean {
-    if (game.isGameOver()) {
-      return handleGameOver();
-    }
-
-    var possibleMoves = game.moves({ verbose: true });
-    var randomIdx = Math.floor(Math.random() * possibleMoves.length);
-    const randMove = possibleMoves[randomIdx];
-    return moveUpdate(randMove);
   }
 
   function moveUpdate(move?: Move): boolean {
@@ -131,6 +112,8 @@ function AIGame(): JSX.Element {
       console.log(error);
       return false;
     }
+
+    setGameFEN(game.fen());
 
     return true;
   }
@@ -154,7 +137,7 @@ function AIGame(): JSX.Element {
   function resetGame() {
     setStart(false);
     setPause(false);
-    const newGame = new Chess(); // Create a fresh game instance
+    const newGame = new Chess();
     setGame(newGame);
     setGameFEN(newGame.fen());
     setWhiteBot(() => new ChessAI(newGame, "w"));
