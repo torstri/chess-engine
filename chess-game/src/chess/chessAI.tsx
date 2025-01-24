@@ -1,8 +1,21 @@
-import { Chess, Move, PieceSymbol} from "chess.js";
+import { Chess, Move, PieceSymbol } from "chess.js";
 import { Node } from "./Node";
 import { State } from "./State";
-import { C, MAXDEPTH, ALLOWED_DURATION } from "./utils/Constants";
-import { evaluateTerminalState, sumPieceSquareEvaluation, evaluateMaterial, evaluateMobility, evaluateThreats } from "./utils/Evaluation";
+import {
+  C,
+  MAXDEPTH,
+  ALLOWED_DURATION,
+  MOBILITY_WEIGHT,
+  MATERIAL_WEIGHT,
+} from "./utils/Constants";
+import {
+  evaluateTerminalState,
+  evaluateState,
+  evaluateMove,
+  evaluateMobility,
+  materialEvaluation,
+  mobiltyEvaluation,
+} from "./utils/Evaluation";
 import { Player } from "./utils/Types";
 
 // Statistics
@@ -12,7 +25,7 @@ let expansionCount = 0;
 let selectionTime = 0;
 let rolloutTime = 0;
 let expansionTime = 0;
-
+let print = true;
 
 export class ChessAI {
   player: string;
@@ -26,7 +39,6 @@ export class ChessAI {
 
   // Monte Carlo Tree Search
   makeMove(game: Chess): Move {
-
     this.root = new Node(new State(game.fen()), this.player, 0);
 
     const startTime = Date.now();
@@ -54,7 +66,7 @@ export class ChessAI {
       }
     }
 
-    this.consoleLogs(game, this.player);
+    this.printStatistics(game);
 
     rolloutCount = 0;
     expansionCount = 0;
@@ -64,26 +76,23 @@ export class ChessAI {
     return this.getBestMove(this.root);
   }
 
-  getBestMove(root: Node, verbose?: boolean): Move {
-
+  getBestMove(root: Node): Move {
     let move: Move | undefined;
     let maxScore = -Infinity;
-    let bestChild: Node | undefined;
     root.children.forEach((ch: Node) => {
       if (ch.state.totalScore > maxScore) {
         move = ch.move;
         maxScore = ch.state.totalScore;
-        bestChild = ch;
       }
     });
 
     if (!move) throw new Error("No move found");
 
-    if(verbose) {
+    if (print) {
       console.log("------------ New Move --------------");
       const visits = this.root?.visits;
       const score = this.root?.state.totalScore;
-      if (visits && score && verbose) {
+      if (visits && score && print) {
         console.log("Best move found: ", move);
         console.log(
           "With evaluated position : ",
@@ -135,15 +144,17 @@ export class ChessAI {
     }
   }
 
-  rollout(game: Chess, depth: number): number {
+  rollout(game: Chess, depth: number, move?: Move): number {
     if (game.isGameOver()) return evaluateTerminalState(game, this.player);
 
     if (depth > MAXDEPTH) {
-      return sumPieceSquareEvaluation(game, this.player);
+      let score = evaluateState(game, this.player);
+      score += move ? evaluateMove(game, move, this.player) : 0;
+      return score;
     }
 
     const randomIndex = Math.floor(Math.random() * game.moves().length);
-    const randomMove = game.moves()[randomIndex];
+    const randomMove = game.moves({ verbose: true })[randomIndex];
 
     try {
       game.move(randomMove);
@@ -152,11 +163,10 @@ export class ChessAI {
       throw new Error("INVALID MOVE");
     }
 
-    return this.rollout(game, depth + 1);
+    return this.rollout(game, depth + 1, randomMove);
   }
 
   ucb1(score: number, N: number, n: number): number {
-
     if (n == 0 || N == 0) return Infinity;
 
     return score / n + C * Math.sqrt(Math.log(N) / n);
@@ -207,36 +217,16 @@ export class ChessAI {
       console.log(`Row ${rowIndex + 1}: ${row}`);
     });
   }
-  
-  consoleLogs(game: Chess, color: string) {
-    const whiteMobility = evaluateMobility(game, this.player, Player.White);
-    const blackMobility = evaluateMobility(game, this.player, Player.Black);
 
-    // Normalize
-    const mobilityScore =
-      color === Player.White
-        ? whiteMobility - blackMobility
-        : blackMobility - whiteMobility;
-
-    const whiteMaterial = evaluateMaterial(game, Player.White);
-    const blackMaterial = evaluateMaterial(game, Player.Black);
-
-    const materialScore =
-      color === Player.White
-        ? whiteMaterial - blackMaterial
-        : blackMaterial - whiteMaterial;
-
-    const whiteThreats = evaluateThreats(game, Player.White);
-    const blackThreats = evaluateThreats(game, Player.Black);
-    const alternatvetTthreatEvaluation =
-      color === Player.White
-        ? blackThreats - whiteThreats
-        : whiteThreats - blackThreats;
-    const threatEvaluation = evaluateThreats(game, color);
-    console.log("Mobility Score: ", 0.1 * mobilityScore);
-    console.log("Material Score: ", materialScore);
-    console.log("Threat Score: ", -threatEvaluation);
-    console.log("Alt Threat Score: ", alternatvetTthreatEvaluation);
+  printStatistics(game: Chess) {
+    if (print) {
+      const opponent = this.player === "w" ? "b" : "w";
+      const mobilityScore = mobiltyEvaluation(game, this.player, opponent);
+      const materialScore = materialEvaluation(game, this.player);
+      console.log("Playing as: ", this.player);
+      console.log("Mobility Score: ", MOBILITY_WEIGHT * mobilityScore);
+      console.log("Material Score: ", MATERIAL_WEIGHT * materialScore);
+    }
 
     console.log(
       "Rollouts: ",
