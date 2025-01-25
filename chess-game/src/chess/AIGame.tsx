@@ -5,7 +5,6 @@ import { ChessAI } from "./chessAI";
 import { chessAI_v1 } from "../old-versions/chess-engine-1.0.0/chessAI_v1";
 import { Player } from "./utils/Types";
 
-
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -32,7 +31,7 @@ function AIGame(): JSX.Element {
   const [draws, setDraws] = useState<number>(0);
 
   const navigate = useNavigate();
-  const turnDuration = 200;
+  const turnDuration = 1;
 
   useEffect(() => {
     setWhiteBot(() => {
@@ -50,7 +49,7 @@ function AIGame(): JSX.Element {
         const success = playNextMove();
         if (!success) {
           setStart(false);
-        } 
+        }
       };
       const timerId = setTimeout(playMove, turnDuration);
       return () => clearTimeout(timerId);
@@ -230,6 +229,15 @@ function AIGame(): JSX.Element {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <div>
+        White Evaluation ={" "}
+        {whiteBot?.root?.state?.totalScore / whiteBot?.root?.visits}
+      </div>
+      <div>
+        Black Evaluation ={" "}
+        {blackBot?.root?.state?.totalScore / blackBot?.root?.visits}
+      </div>
     </div>
   );
 }

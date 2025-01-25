@@ -127,7 +127,45 @@ function Game(): JSX.Element {
       return new ChessAI(game, "b");
     });
   }
+  function runTests() {
+    let testGame = new Chess();
 
+    let fen_start_position =
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    testGame.load(fen_start_position);
+    let testAIWhite = new ChessAI(testGame, "w");
+    let testAIBlack = new ChessAI(testGame, "b");
+
+    let fen_mate_in_1_white = "7k/5ppp/8/8/8/8/5PPP/3R3K w - - 0 1";
+    testGame.load(fen_mate_in_1_white);
+    let fen_mate_in_1_black = "4r2k/5ppp/8/8/8/8/5PPP/7K b - - 0 1";
+    console.log("------------------------Tests----------------------");
+    console.log(
+      "Start position, White: ",
+      testAIWhite.getEvalution(new Chess(fen_start_position)),
+      " and Black: ",
+      testAIBlack.getEvalution(new Chess(fen_start_position))
+    );
+
+    console.log(
+      "Mate in 1 for white, Evaluation by White: ",
+      testAIWhite.getEvalution(new Chess(fen_mate_in_1_white)),
+      " and Black: ",
+      testAIBlack.getEvalution(new Chess(fen_mate_in_1_white))
+    );
+
+    console.log(
+      "Mate in 1 for black, Evaluation by White: ",
+      testAIWhite.getEvalution(new Chess(fen_mate_in_1_black)),
+      " and Black: ",
+      testAIBlack.getEvalution(new Chess(fen_mate_in_1_black))
+    );
+    console.log("------------------------End Tests----------------------");
+
+    let mate_in_1 = new Chess("3R2rk/5ppp/8/8/3Q4/6RP/5PP1/7K w - - 0 1");
+    testAIWhite = new ChessAI(mate_in_1, "w");
+    console.log("Test: ", testAIWhite.makeMove(mate_in_1));
+  }
   return (
     <div className="container">
       <Chessboard position={gameFEN} onSquareClick={handleSquareClick} />
@@ -151,6 +189,7 @@ function Game(): JSX.Element {
           Evaluation = {chessBot.root?.state.totalScore / chessBot.root?.visits}
         </div>
       )}
+      <Button onClick={runTests}>Run Tests</Button>
     </div>
   );
 }
