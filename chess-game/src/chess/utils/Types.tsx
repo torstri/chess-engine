@@ -6,6 +6,6 @@ export enum Player {
 export enum stateBias {
   castled = 50,
   inCheck = 100,
-  checkMate = 1000,
+  checkMate = 2000,
   draw = 0,
 }

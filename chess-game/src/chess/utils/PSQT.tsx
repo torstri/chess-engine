@@ -1,5 +1,5 @@
 import { Move, PieceSymbol } from "chess.js";
-
+import { END_GAME_PIECE_AMOUNT } from "./Constants";
 //  ****************
 
 // See https://www.chessprogramming.org/Simplified_Evaluation_Function#Piece-Square_Tables
@@ -58,8 +58,18 @@ export const PSQT = {
     [5, 10, 10, -20, -20, 10, 10, 5],
     [0, 0, 0, 0, 0, 0, 0, 0],
   ],
+  PAWN_ENDGAME: [
+    [200, 200, 200, 200, 200, 200, 200, 200],
+    [100, 100, 100, 100, 100, 100, 100, 100],
+    [60, 60, 60, 60, 60, 60, 60, 60],
+    [30, 30, 40, 50, 50, 40, 30, 30],
+    [20, 20, 30, 40, 40, 30, 20, 20],
+    [10, 10, 20, 30, 30, 20, 10, 10],
+    [0, 0, 10, 10, 10, 10, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+  ],
   // King mid game
-  KING_MID_GAME: [
+  KING_MIDGAME: [
     [-30, -40, -40, -50, -50, -40, -40, -30],
     [-30, -40, -40, -50, -50, -40, -40, -30],
     [-30, -40, -40, -50, -50, -40, -40, -30],
@@ -71,7 +81,7 @@ export const PSQT = {
   ],
 
   // king end game
-  KING_END_GAME: [
+  KING_ENDGAME: [
     [-50, -40, -30, -20, -20, -30, -40, -50],
     [-30, -20, -10, 0, 0, -10, -20, -30],
     [-30, -10, 20, 30, 30, 20, -10, -30],
@@ -89,6 +99,7 @@ export const PSQT_MAP: { [key in PieceSymbol]?: number[][] } = {
   n: PSQT.KNIGHT,
   r: PSQT.ROOK,
   q: PSQT.QUEEN,
+  k: PSQT.KING_MIDGAME,
 };
 
 export function getSquareInTable(

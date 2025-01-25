@@ -1,4 +1,4 @@
-import { Chess, Move, PieceSymbol, validateFen } from "chess.js";
+import { Chess, Move, PieceSymbol, validateFen, Color } from "chess.js";
 import { stateBias, Player } from "./Types";
 import {
   pieceValue,
@@ -6,12 +6,11 @@ import {
   MOBILITY_WEIGHT,
   MATERIAL_WEIGHT,
 } from "./Constants";
-import { PSQT_MAP, getSquareInTable } from "./PSQT";
+import { PSQT_MAP, getSquareInTable, PSQT } from "./PSQT";
 
 // Evaluates if a game is end game or not
-export function isEndGame(game: Chess): boolean {
-  const fenString = game.fen();
-  const boardState = fenString.split(" ")[0];
+export function isEndGame(fen: string): boolean {
+  const boardState = fen.split(" ")[0];
 
   const pieceCount = boardState.split("").reduce((count, char) => {
     if (/[prnbqkPRNBQK]/.test(char)) {
@@ -64,10 +63,12 @@ export function evaluateTerminalState(game: Chess, player: String): number {
 export function evaluateState(game: Chess, player: string): number {
   let opponent = player === "w" ? "b" : "w";
 
-  // const mobilityScore = mobiltyEvaluation(game, player, opponent);
+  const mobilityScore = newMobilityEvaluation(game, player);
   const materialScore = materialEvaluation(game, player);
   // const threatScore = threatEvaluation(game, player);
-  return MATERIAL_WEIGHT * materialScore;
+  return MATERIAL_WEIGHT * materialScore + mobilityScore * MOBILITY_WEIGHT;
+  // console.log("Mobility score: ", mobilityScore);
+  // console.log("Material score: ", materialScore);
 
   // return MOBILITY_WEIGHT * mobilityScore + MATERIAL_WEIGHT * materialScore;
 }
@@ -108,12 +109,18 @@ export function mobiltyEvaluation(
   return playerMobility - opponentMobility;
 }
 
-export function valueOfNewPos(move: Move, color: string): number {
+export function valueOfNewPos(move: Move, color: string, fen: string): number {
   const from = move.from;
   const to = move.to;
   const piece = move.piece;
-  const psqt = PSQT_MAP[piece];
+  let psqt = PSQT_MAP[piece];
 
+  if (piece === "p" && isEndGame(fen)) {
+    psqt = PSQT.PAWN_ENDGAME;
+  }
+  if (piece === "k" && isEndGame(fen)) {
+    psqt = PSQT.KING_ENDGAME;
+  }
   const squareFrom = getSquareInTable(from, color);
   const squareTo = getSquareInTable(to, color);
   const valueFrom = psqt ? psqt[squareFrom.rowIdx][squareFrom.colIdx] : 0;
@@ -125,14 +132,111 @@ export function valueOfNewPos(move: Move, color: string): number {
 export function valueOfSquare(
   piece: PieceSymbol,
   square: string,
-  color: string
+  color: string,
+  fen: string
 ): number {
   const tableIndex = getSquareInTable(square, color);
-  const psqt = PSQT_MAP[piece];
+  let psqt = PSQT_MAP[piece];
+
+  if (piece === "p" && isEndGame(fen)) {
+    psqt = PSQT.PAWN_ENDGAME;
+  }
+
+  if (piece === "k" && isEndGame(fen)) {
+    psqt = PSQT.KING_ENDGAME;
+  }
 
   return psqt
     ? pieceValue[piece] + psqt[tableIndex.rowIdx][tableIndex.colIdx]
     : 0;
+}
+
+export function newMobilityEvaluation(game: Chess, player: string): number {
+  // For a given square we have the following properties:
+  // Occupation: which color occupies the square -> player | opponent | null
+  // AttackedBy: which color attacks the square -> player | opponent | p & o | null
+  // Therefore we have 12 dfferent possibilities (?)
+
+  // SINCE WE DO NOT KNOW WHICH PIECE IS ATTACKING A SQUARE
+  // WE IGNORE THE CASE WHERE THE SQUARE IS UNOCCUPIED
+  // BOTH COLORS ATTACK THE SQUARE
+
+  // We want to determine the difference in our attacking and attacked status
+  // So perhaps it will be like this:
+  // Iterate over each square
+  // Only consder sqaures which are only attacked by one color
+  // Then we have four possibilities:
+  // Occupancy -> player | opponent | null
+  // Attacker -> player | opponent
+  // However, .board represents empty squares as null so we do not know which
+  // square that is :( so we need to ignore unoccupied squares
+
+  let fen = game.fen();
+
+  let playerAttackedOpponentSquares = 0;
+  let playerDefendedSquares = 0;
+  let playerMobility = 0;
+  let opponentAttackedPlayerSquares = 0;
+  let opponentDefendedSquares = 0;
+  let opponentMobility = 0;
+  let playerColor: Color = player === "w" ? "w" : "b";
+  let opponent: Color = player === "w" ? "b" : "w";
+
+  game.board().forEach((row) => {
+    row.forEach((square) => {
+      // If we have square object, the square is occupied
+      if (square) {
+        let isAttackedByPlayer = game.isAttacked(square?.square, playerColor);
+        let isAttackedByOpponent = game.isAttacked(square.square, opponent);
+        // If both players attack we do nothing
+        if (isAttackedByPlayer && isAttackedByOpponent) {
+          return; // Might lead to unexpected behaviour
+          // Attacked by only player
+        } else if (isAttackedByPlayer) {
+          // Occupied by player
+          if (square.color === playerColor) {
+            playerMobility += valueOfSquare(
+              square.type,
+              square.square,
+              player,
+              fen
+            );
+            // Occupied by opponent
+          } else {
+            playerMobility += valueOfSquare(
+              square.type,
+              square.square,
+              opponent,
+              fen
+            );
+          }
+          // Attacked by only opponent
+        } else {
+          // Occupied by player
+          if (square.color === playerColor) {
+            opponentAttackedPlayerSquares++;
+            opponentMobility += valueOfSquare(
+              square.type,
+              square.square,
+              player,
+              fen
+            );
+
+            // Occupied by opponent
+          } else {
+            opponentMobility += valueOfSquare(
+              square.type,
+              square.square,
+              opponent,
+              fen
+            );
+          }
+        }
+      }
+    });
+  });
+
+  return playerMobility - opponentMobility;
 }
 
 export function evaluateMobility(game: Chess, color: string): number {
@@ -142,13 +246,19 @@ export function evaluateMobility(game: Chess, color: string): number {
   const legalMovesMap: { [key: string]: number } = {};
   let newPosVal = 0;
   let defenseValue = 0;
+  let fen = game.fen();
+
+  // More simple approach
+  // How many squares are we attacking?
+  // If enemy on the
+  // How many of our squares are attacked?
 
   game.moves({ verbose: true }).forEach((move) => {
     // value[move.piece] * PSQT(move.to)
-    newPosVal += valueOfNewPos(move, move.color);
+    newPosVal += valueOfNewPos(move, move.color, fen);
     if (move.captured) {
       // Value of enemy * PSQT(enemy) + Value of piece * PSQT(move.to) - Value of piece * PSQT(move.from)
-      newPosVal += valueOfSquare(move.captured, move.to, move.color);
+      newPosVal += valueOfSquare(move.captured, move.to, move.color, fen);
     }
 
     // Save all squares we can move to with a legal move
@@ -156,6 +266,8 @@ export function evaluateMobility(game: Chess, color: string): number {
       ? legalMovesMap[move.to]++
       : 1;
   });
+
+  let attackingSqaures;
 
   game.board().forEach((row) => {
     row.forEach((square) => {
@@ -166,7 +278,7 @@ export function evaluateMobility(game: Chess, color: string): number {
           game.isAttacked(square.square, color) &&
           !legalMovesMap[square.square]
         ) {
-          defenseValue += valueOfSquare(square.type, square.square, color);
+          defenseValue += valueOfSquare(square.type, square.square, color, fen);
         }
       }
     });
@@ -180,16 +292,23 @@ export function materialEvaluation(game: Chess, player: string): number {
   let opponentScore = 0;
   let opponentCount = 0;
   let playerCount = 0;
+  let fen = game.fen();
   game.board().forEach((row) => {
     row.forEach((square) => {
       if (square && square.color == player) {
-        playerScore += valueOfSquare(square.type, square.square, square.color);
+        playerScore += valueOfSquare(
+          square.type,
+          square.square,
+          square.color,
+          fen
+        );
         playerCount++;
       } else if (square) {
         opponentScore -= valueOfSquare(
           square.type,
           square.square,
-          square.color
+          square.color,
+          fen
         );
         opponentCount++;
       }

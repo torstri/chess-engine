@@ -129,7 +129,9 @@ function Game(): JSX.Element {
   }
   function runTests() {
     let testGame = new Chess();
-    testGame.load("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    testGame.load(
+      "rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
+    );
     let testAIWhite = new ChessAI(testGame, "w");
     let testAIBlack = new ChessAI(testGame, "w");
 

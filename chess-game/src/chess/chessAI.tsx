@@ -25,7 +25,7 @@ let expansionCount = 0;
 let selectionTime = 0;
 let rolloutTime = 0;
 let expansionTime = 0;
-let print = true;
+let print = false;
 
 export class ChessAI {
   player: string;
@@ -226,20 +226,19 @@ export class ChessAI {
       console.log("Playing as: ", this.player);
       console.log("Mobility Score: ", MOBILITY_WEIGHT * mobilityScore);
       console.log("Material Score: ", MATERIAL_WEIGHT * materialScore);
+      console.log(
+        "Rollouts: ",
+        rolloutCount,
+        ". Average time spent on rollouts: ",
+        rolloutTime / rolloutCount
+      );
+      console.log(
+        "Expansions: ",
+        expansionCount,
+        ". Average time spent on expansions: ",
+        expansionTime / expansionCount
+      );
     }
-
-    console.log(
-      "Rollouts: ",
-      rolloutCount,
-      ". Average time spent on rollouts: ",
-      rolloutTime / rolloutCount
-    );
-    console.log(
-      "Expansions: ",
-      expansionCount,
-      ". Average time spent on expansions: ",
-      expansionTime / expansionCount
-    );
   }
 
   getEvalution(game: Chess) {

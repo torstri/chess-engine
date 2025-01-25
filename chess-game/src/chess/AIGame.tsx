@@ -31,7 +31,7 @@ function AIGame(): JSX.Element {
   const [draws, setDraws] = useState<number>(0);
 
   const navigate = useNavigate();
-  const turnDuration = 200;
+  const turnDuration = 1;
 
   useEffect(() => {
     setWhiteBot(() => {
