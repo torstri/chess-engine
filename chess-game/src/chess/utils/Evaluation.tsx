@@ -66,6 +66,14 @@ export function evaluateState(game: Chess, player: string): number {
   const mobilityScore = newMobilityEvaluation(game, player);
   const materialScore = materialEvaluation(game, player);
   // const threatScore = threatEvaluation(game, player);
+  // console.log(
+  //   "Player: ",
+  //   player,
+  //   " Mobility Score: ",
+  //   mobilityScore,
+  //   " Material Score: ",
+  //   materialScore
+  // );
   return MATERIAL_WEIGHT * materialScore + mobilityScore * MOBILITY_WEIGHT;
   // console.log("Mobility score: ", mobilityScore);
   // console.log("Material score: ", materialScore);
@@ -140,10 +148,12 @@ export function valueOfSquare(
 
   if (piece === "p" && isEndGame(fen)) {
     psqt = PSQT.PAWN_ENDGAME;
+    // console.log("Found endgame and pawn: ", psqt);
   }
 
   if (piece === "k" && isEndGame(fen)) {
     psqt = PSQT.KING_ENDGAME;
+    // console.log("Found endgame and king: ", psqt);
   }
 
   return psqt
@@ -173,12 +183,9 @@ export function newMobilityEvaluation(game: Chess, player: string): number {
 
   let fen = game.fen();
 
-  let playerAttackedOpponentSquares = 0;
-  let playerDefendedSquares = 0;
   let playerMobility = 0;
-  let opponentAttackedPlayerSquares = 0;
-  let opponentDefendedSquares = 0;
   let opponentMobility = 0;
+
   let playerColor: Color = player === "w" ? "w" : "b";
   let opponent: Color = player === "w" ? "b" : "w";
 
@@ -211,10 +218,9 @@ export function newMobilityEvaluation(game: Chess, player: string): number {
             );
           }
           // Attacked by only opponent
-        } else {
+        } else if (isAttackedByOpponent) {
           // Occupied by player
           if (square.color === playerColor) {
-            opponentAttackedPlayerSquares++;
             opponentMobility += valueOfSquare(
               square.type,
               square.square,
@@ -231,11 +237,12 @@ export function newMobilityEvaluation(game: Chess, player: string): number {
               fen
             );
           }
+        } else {
+          // Attacked by none
         }
       }
     });
   });
-
   return playerMobility - opponentMobility;
 }
 
