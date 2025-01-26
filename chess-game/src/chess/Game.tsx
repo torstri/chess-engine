@@ -16,6 +16,8 @@ import {
   TextField,
   InputAdornment,
 } from "@mui/material";
+import { Player } from "./utils/Types";
+import { chessAI_v1 } from "../old-versions/chess-engine-1.0.0/chessAI_v1";
 
 // Define the type for the modify function used in safeGameMutate
 type ModifyFunction = (game: Chess) => void;
@@ -31,10 +33,10 @@ function Game(): JSX.Element {
   const [m, setMove] = useState<Move | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
-  const [chessBot, setChessBot] = useState<ChessAI>();
+  const [chessBot, setChessBot] = useState<ChessAI | chessAI_v1>();
   const [selectedVersion, setSelectedVersion] = useState<string>("1");
   const [isWhite, setIsWhite] = useState<boolean>(true);
-  const [thinkTime, setThinkTime] = useState<number | string>(1);
+  const [thinkTime, setThinkTime] = useState<string>("1");
 
   useEffect(() => {
     setGameFEN(game.fen());
@@ -200,9 +202,39 @@ function Game(): JSX.Element {
   };
 
   function finishSetup() {
-    console.log("Selected version: ", selectedVersion);
-    console.log("Selected color: ", isWhite ? "White" : "Black");
-    console.log("Thinking time: ", thinkTime);
+    const newGame = new Chess();
+    setGame(newGame);
+    setGameFEN(newGame.fen());
+    let allowedThinkTime = parseInt(thinkTime);
+
+    if (isWhite) {
+      console.log("I Want to play as ", isWhite ? "WHITE!" : "BLACK!");
+    } else {
+      console.log("I want to play as ", isWhite ? "WHITE!" : "BLACK!");
+    }
+
+    if (selectedVersion === "current") {
+      console.log("I want to play against CURRENT version!");
+      setChessBot(() => {
+        return new ChessAI(
+          game,
+          isWhite ? Player.White : Player.Black,
+          allowedThinkTime
+        );
+      });
+    }
+    if (selectedVersion === "1") {
+      console.log("I want to play against VERSION 1!");
+      setChessBot(() => {
+        return new chessAI_v1(
+          game,
+          isWhite ? Player.White : Player.Black,
+          allowedThinkTime
+        );
+      });
+    }
+
+    console.log("AI can think for: ", thinkTime);
   }
 
   return (
@@ -222,6 +254,7 @@ function Game(): JSX.Element {
                 label="Select an AI version"
                 onChange={handleVersionSelect}
               >
+                <MenuItem value="current">Version: Current</MenuItem>
                 <MenuItem value="1">Version: 1</MenuItem>
                 <MenuItem value="2">Version: 2</MenuItem>
                 <MenuItem value="3">Version: 3</MenuItem>

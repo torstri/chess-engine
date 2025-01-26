@@ -337,19 +337,6 @@ function AIGame(): JSX.Element {
                   helperText="Set the time in milliseconds"
                 />
               </FormControl>
-              {/* <div>
-                <label htmlFor="gameInput">Number of Games: </label>
-                <input
-                  id="gameInput"
-                  type="number"
-                  value={numberOfGames}
-                  disabled={start}
-                  onChange={(e) => {
-                    setNumberOfGames(Number(e.target.value));
-                  }}
-                  min="1"
-                />
-              </div> */}
             </Grid2>
           </Grid2>
         </Grid2>
