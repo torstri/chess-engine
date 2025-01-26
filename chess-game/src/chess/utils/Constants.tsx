@@ -1,7 +1,7 @@
 export const C = 2;
 export const MAXDEPTH = 3;
-export const duration = 7000;
-export const ALLOWED_DURATION = 7000;
+export const duration = 200;
+export const ALLOWED_DURATION = 200;
 export const TOTAL_PIECE_VALUE = 39;
 export const pieceValue = {
   p: 10,

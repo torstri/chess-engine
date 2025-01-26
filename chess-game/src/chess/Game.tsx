@@ -6,6 +6,16 @@ import { ChessAI } from "./chessAI";
 import Button from "@mui/material/Button";
 import { useNavigate } from "react-router-dom";
 import "../CSS/Game.css";
+import {
+  Select,
+  Grid2,
+  MenuItem,
+  SelectChangeEvent,
+  FormControl,
+  InputLabel,
+  TextField,
+  InputAdornment,
+} from "@mui/material";
 
 // Define the type for the modify function used in safeGameMutate
 type ModifyFunction = (game: Chess) => void;
@@ -22,6 +32,9 @@ function Game(): JSX.Element {
   const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
   const [chessBot, setChessBot] = useState<ChessAI>();
+  const [selectedVersion, setSelectedVersion] = useState<string>("1");
+  const [isWhite, setIsWhite] = useState<boolean>(true);
+  const [thinkTime, setThinkTime] = useState<number | string>(1);
 
   useEffect(() => {
     setGameFEN(game.fen());
@@ -39,7 +52,7 @@ function Game(): JSX.Element {
 
   useEffect(() => {
     setChessBot(() => {
-      return new ChessAI(game, "b");
+      return new ChessAI(game, "b", 200);
     });
   }, []);
 
@@ -124,7 +137,7 @@ function Game(): JSX.Element {
     setGameFEN(game.fen());
 
     setChessBot(() => {
-      return new ChessAI(game, "b");
+      return new ChessAI(game, "b", 200);
     });
   }
   function runTests() {
@@ -133,8 +146,8 @@ function Game(): JSX.Element {
     let fen_start_position =
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     testGame.load(fen_start_position);
-    let testAIWhite = new ChessAI(testGame, "w");
-    let testAIBlack = new ChessAI(testGame, "b");
+    let testAIWhite = new ChessAI(testGame, "w", 200);
+    let testAIBlack = new ChessAI(testGame, "b", 200);
 
     let fen_mate_in_1_white = "7k/5ppp/8/8/8/8/5PPP/3R3K w - - 0 1";
     testGame.load(fen_mate_in_1_white);
@@ -163,34 +176,132 @@ function Game(): JSX.Element {
     console.log("------------------------End Tests----------------------");
 
     let mate_in_1 = new Chess("3R2rk/5ppp/8/8/3Q4/6RP/5PP1/7K w - - 0 1");
-    testAIWhite = new ChessAI(mate_in_1, "w");
+    testAIWhite = new ChessAI(mate_in_1, "w", 200);
     console.log("Test: ", testAIWhite.makeMove(mate_in_1));
   }
+
+  const handleVersionSelect = (event: SelectChangeEvent) => {
+    setSelectedVersion(event.target.value as string);
+    console.log("Selected version: ", event.target.value);
+  };
+
+  const handleColorClick = () => {
+    setIsWhite(!isWhite);
+  };
+
+  const handleThinkTimeChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = event.target.value;
+    // Ensure that the value is either an empty string or a positive integer
+    if (value === "" || /^[0-9]+$/.test(value)) {
+      setThinkTime(value);
+    }
+  };
+
+  function finishSetup() {
+    console.log("Selected version: ", selectedVersion);
+    console.log("Selected color: ", isWhite ? "White" : "Black");
+    console.log("Thinking time: ", thinkTime);
+  }
+
   return (
-    <div className="container">
-      <Chessboard position={gameFEN} onSquareClick={handleSquareClick} />
-      <div className="button-group">
-        <Button variant="outlined" disabled={loading} onClick={resetGame}>
-          Restart
-        </Button>
-        <Button
-          variant="outlined"
-          disabled={loading}
-          onClick={() => {
-            navigate("/");
-          }}
-        >
-          Home
-        </Button>
-      </div>
-      <div>{game.fen()}</div>
-      {chessBot?.root?.state && (
-        <div>
-          Evaluation = {chessBot.root?.state.totalScore / chessBot.root?.visits}
+    <Grid2 container spacing={2} sx={{ padding: "20px" }}>
+      {/* First Grid Column with Input Form */}
+      <Grid2 size={4}>
+        <Grid2 container direction="column" spacing={2}>
+          {/* Select AI Version */}
+          <Grid2>
+            <FormControl fullWidth>
+              <InputLabel id="version-select-label">
+                Select an AI version
+              </InputLabel>
+              <Select
+                labelId="version-select-label"
+                value={selectedVersion}
+                label="Select an AI version"
+                onChange={handleVersionSelect}
+              >
+                <MenuItem value="1">Version: 1</MenuItem>
+                <MenuItem value="2">Version: 2</MenuItem>
+                <MenuItem value="3">Version: 3</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid2>
+
+          {/* Play Color Button */}
+          <Grid2>
+            <Button
+              onClick={handleColorClick}
+              variant="outlined"
+              sx={{
+                backgroundColor: isWhite ? "white" : "black",
+                color: isWhite ? "black" : "white",
+                borderColor: "black",
+                "&:hover": {
+                  backgroundColor: isWhite ? "#f0f0f0" : "#333",
+                },
+              }}
+            >
+              {isWhite ? "Play as White" : "Play as Black"}
+            </Button>
+          </Grid2>
+
+          {/* Think Time Input */}
+          <Grid2>
+            <FormControl fullWidth>
+              <TextField
+                id="think-time"
+                label="AI Think Time (ms)"
+                value={thinkTime}
+                onChange={handleThinkTimeChange}
+                variant="outlined"
+                type="text"
+                helperText="Set the time in milliseconds"
+              />
+            </FormControl>
+          </Grid2>
+
+          {/* Run Tests Button */}
+          <Grid2>
+            <Button onClick={runTests}>Run Tests</Button>
+          </Grid2>
+        </Grid2>
+      </Grid2>
+
+      {/* Second Grid Column with Chessboard */}
+      <Grid2 size={5}>
+        <Chessboard position={gameFEN} onSquareClick={handleSquareClick} />
+        <div> Current FEN: {game.fen()}</div>
+        {chessBot?.root?.state && (
+          <div>
+            Evaluation ={" "}
+            {chessBot.root?.state.totalScore / chessBot.root?.visits}
+          </div>
+        )}
+      </Grid2>
+
+      {/* Third Grid Column with Additional Buttons */}
+      <Grid2 size={3}>
+        <div className="button-group">
+          <Button variant="outlined" disabled={loading} onClick={finishSetup}>
+            Finish Setup
+          </Button>
+          <Button variant="outlined" disabled={loading} onClick={resetGame}>
+            Restart
+          </Button>
+          <Button
+            variant="outlined"
+            disabled={loading}
+            onClick={() => {
+              navigate("/");
+            }}
+          >
+            Home
+          </Button>
         </div>
-      )}
-      <Button onClick={runTests}>Run Tests</Button>
-    </div>
+      </Grid2>
+    </Grid2>
   );
 }
 
