@@ -309,24 +309,6 @@ function AIGame(): JSX.Element {
               </FormControl>
             </Grid2>
 
-            {/* Play Color Button */}
-            <Grid2>
-              <Button
-                onClick={handleColorClick}
-                variant="outlined"
-                sx={{
-                  backgroundColor: isWhite ? "white" : "black",
-                  color: isWhite ? "black" : "white",
-                  borderColor: "black",
-                  "&:hover": {
-                    backgroundColor: isWhite ? "#f0f0f0" : "#333",
-                  },
-                }}
-              >
-                {isWhite ? "Play as White" : "Play as Black"}
-              </Button>
-            </Grid2>
-
             {/* Think Time Input */}
             <Grid2>
               <FormControl fullWidth>
@@ -341,24 +323,39 @@ function AIGame(): JSX.Element {
                 />
               </FormControl>
             </Grid2>
+            <Grid2>
+              <FormControl fullWidth>
+                <TextField
+                  id="gameInput"
+                  label="Number of games"
+                  value={numberOfGames}
+                  onChange={(e) => {
+                    setNumberOfGames(Number(e.target.value));
+                  }}
+                  variant="outlined"
+                  type="text"
+                  helperText="Set the time in milliseconds"
+                />
+              </FormControl>
+              {/* <div>
+                <label htmlFor="gameInput">Number of Games: </label>
+                <input
+                  id="gameInput"
+                  type="number"
+                  value={numberOfGames}
+                  disabled={start}
+                  onChange={(e) => {
+                    setNumberOfGames(Number(e.target.value));
+                  }}
+                  min="1"
+                />
+              </div> */}
+            </Grid2>
           </Grid2>
         </Grid2>
       </Grid2>
 
       <Grid2 size={12}>
-        <div>
-          <label htmlFor="gameInput">Number of Games: </label>
-          <input
-            id="gameInput"
-            type="number"
-            value={numberOfGames}
-            disabled={start}
-            onChange={(e) => {
-              setNumberOfGames(Number(e.target.value));
-            }}
-            min="1"
-          />
-        </div>
         <span style={{ padding: "10px" }}>Games Played: {gamesPlayed}</span>
         <TableContainer component={Paper} sx={{ width: "800px" }}>
           <Table sx={{ minWidth: 650 }} aria-label="simple table">
