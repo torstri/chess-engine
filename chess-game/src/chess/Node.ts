@@ -1,4 +1,4 @@
-import { Chess, Move } from "chess.js";
+import { Chess, Move, Color } from "chess.js";
 import { State } from "./State";
 import { evaluateState } from "./utils/Evaluation";
 
@@ -30,12 +30,12 @@ export class Node {
       return this.state.possibleMoves();
     }
   
-    nodeExpansion(player: string) {
+    nodeExpansion(player: Color) {
       this.state.possibleMoves().forEach((move: Move) => {
         const gameCopy = new Chess(this.state.fen);
         gameCopy.move(move);
         this.addChild(
-          new State(gameCopy.fen(), evaluateState(gameCopy, player, move)),
+          new State(gameCopy.fen(), evaluateState(gameCopy, player)),
           gameCopy.turn(),
           move
         );

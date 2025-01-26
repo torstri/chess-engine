@@ -1,4 +1,4 @@
-import { Chess, Move, PieceSymbol } from "chess.js";
+import { Chess, Move, PieceSymbol, Color } from "chess.js";
 import { Node } from "./Node";
 import { State } from "./State";
 import {
@@ -16,7 +16,6 @@ import {
   materialEvaluation,
   mobiltyEvaluation,
 } from "./utils/Evaluation";
-import { Player } from "./utils/Types";
 
 // Statistics
 let selectionCount = 0;
@@ -28,10 +27,10 @@ let expansionTime = 0;
 let print = false;
 
 export class ChessAI {
-  player: string;
+  player: Color;
   root: Node | undefined;
 
-  constructor(game: Chess, player: string) {
+  constructor(game: Chess, player: Color) {
     this.player = player;
     this.root = new Node(new State(game.fen()), player, 0);
     this.root.nodeExpansion(player);

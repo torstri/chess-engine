@@ -1,13 +1,52 @@
 # chess-engine
 
-Comands
+## Commands
+### Install Dependencies
+Before running the project, ensure all dependencies are installed. Run the following command in the root directory of the project:
+```
 npm install
+```
+
+### Run the Development Server
+```
 npm run dev
+```
+
+### Jest
+Run the following command to run all tests
+```
+npm test
+```
 
 ## Evaluation of Game State
 
+```Typescript
+export function newMobilityEvaluation(game: Chess, player: Color): number {
+````
+````
+For a given square we have the following properties:
+  Occupation: which color occupies the square -> player | opponent | null
+  AttackedBy: which color attacks the square -> player | opponent | p & o | null
+  Therefore we have 12 dfferent possibilities (?)
+
+  SINCE WE DO NOT KNOW WHICH PIECE IS ATTACKING A SQUARE
+  WE IGNORE THE CASE WHERE THE SQUARE IS UNOCCUPIED
+  BOTH COLORS ATTACK THE SQUARE
+
+  We want to determine the difference in our attacking and attacked status
+  So perhaps it will be like this:
+  Iterate over each square
+  Only consder sqaures which are only attacked by one color
+  Then we have four possibilities:
+  Occupancy -> player | opponent | null
+  Attacker -> player | opponent
+  However, .board represents empty squares as null so we do not know which
+  square that is :( so we need to ignore unoccupied squares
+  ````
+```
  Right now this probably favours aggressive players;
  returns number of squares we defend + number of squares we attack
+```
 ```Typescript
   export function evaluateMobility(game: Chess, player: string, color: string): number {
 ```
