@@ -1,4 +1,4 @@
-import { Chess, Move, PieceSymbol } from "chess.js";
+import { Chess, Move, PieceSymbol, Color } from "chess.js";
 import { Node } from "./Node";
 import { State } from "./State";
 import {
@@ -16,6 +16,7 @@ import {
   materialEvaluation,
   mobiltyEvaluation,
 } from "./utils/Evaluation";
+
 import { Player } from "./utils/Types";
 
 // Statistics
@@ -28,10 +29,10 @@ let expansionTime = 0;
 let print = false;
 
 export class ChessAI {
-  player: string;
+  player: Color;
   root: Node | undefined;
   maxDuration: number = 200;
-  constructor(game: Chess, player: string, maxDuration: number) {
+  constructor(game: Chess, player: Color, maxDuration: number) {
     this.player = player;
     this.root = new Node(new State(game.fen()), player, 0);
     this.root.nodeExpansion(player);
@@ -46,19 +47,13 @@ export class ChessAI {
 
   // Monte Carlo Tree Search
   makeMove(game: Chess): Move {
-    // console.log("Thinking");
     this.root = new Node(new State(game.fen()), this.player, 0);
-    // console.log(
-    //   "CURRENT VERSION PLAYING AS",
-    //   this.player === "w" ? " WHITE!" : " BLACK!",
-    //   " with max duration =",
-    //   this.maxDuration
-    // );<
 
     const startTime = Date.now();
     let tempTime = startTime;
     let current: Node = this.root;
     while (Date.now() - startTime < this.maxDuration) {
+
       // Tree traversal phase
       if (!current.isLeaf()) {
         current = this.getMaxUCBnode(current);
