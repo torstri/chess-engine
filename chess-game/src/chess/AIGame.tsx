@@ -3,6 +3,7 @@ import { Chess, Move } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { ChessAI } from "./chessAI";
 import { chessAI_v1 } from "../old-versions/chess-engine-1.0.0/chessAI_v1";
+import { chessAI_v2 } from "../old-versions/chess-engine-2.0.0/chessAI_v2";
 import { Player } from "./utils/Types";
 
 import Table from "@mui/material/Table";
@@ -200,10 +201,15 @@ function AIGame(): JSX.Element {
 
     console.log("Thinking time: ", thinkTime);
     console.log("-----------");
-
-    const newGame = new Chess();
+    let ruyLopez =
+      "r1bq1rk1/ppp2ppp/2np1n2/1Bb1p3/4P3/3P1N2/PPP2PPP/RNBQR1K1 w - e6 0 2";
+    const newGame = new Chess(ruyLopez);
     setGame(newGame);
     setGameFEN(newGame.fen());
+    setTurnCounter(0);
+    setwhiteWins(0);
+    setDraws(0);
+    setBlackWins(0);
     let allowedThinkTime = parseInt(thinkTime);
     if (selectedWhiteVersion === "current") {
       setWhiteBot(() => {
@@ -212,6 +218,10 @@ function AIGame(): JSX.Element {
     } else if (selectedWhiteVersion === "1") {
       setWhiteBot(() => {
         return new chessAI_v1(game, Player.White, allowedThinkTime);
+      });
+    } else if (selectedWhiteVersion === "2") {
+      setWhiteBot(() => {
+        return new chessAI_v2(game, Player.White, allowedThinkTime);
       });
     }
 
@@ -222,6 +232,10 @@ function AIGame(): JSX.Element {
     } else if (selectedBlackVersion === "1") {
       setBlackBot(() => {
         return new chessAI_v1(game, Player.Black, allowedThinkTime);
+      });
+    } else if (selectedBlackVersion === "2") {
+      setBlackBot(() => {
+        return new chessAI_v2(game, Player.Black, allowedThinkTime);
       });
     }
   }
