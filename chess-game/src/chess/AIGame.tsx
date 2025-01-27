@@ -4,6 +4,7 @@ import { Chessboard } from "react-chessboard";
 import { ChessAI } from "./chessAI";
 import { chessAI_v1 } from "../old-versions/chess-engine-1.0.0/chessAI_v1";
 import { chessAI_v2 } from "../old-versions/chess-engine-2.0.0/chessAI_v2";
+import { chessAI_v3 } from "../old-versions/chess-engine-3.0.0/chessAI_v3";
 import { Player } from "./utils/Types";
 
 import Table from "@mui/material/Table";
@@ -223,6 +224,10 @@ function AIGame(): JSX.Element {
       setWhiteBot(() => {
         return new chessAI_v2(game, Player.White, allowedThinkTime);
       });
+    } else if (selectedWhiteVersion === "3") {
+      setWhiteBot(() => {
+        return new chessAI_v3(game, Player.White, allowedThinkTime);
+      });
     }
 
     if (selectedBlackVersion === "current") {
@@ -236,6 +241,10 @@ function AIGame(): JSX.Element {
     } else if (selectedBlackVersion === "2") {
       setBlackBot(() => {
         return new chessAI_v2(game, Player.Black, allowedThinkTime);
+      });
+    } else if (selectedBlackVersion === "3") {
+      setBlackBot(() => {
+        return new chessAI_v3(game, Player.Black, allowedThinkTime);
       });
     }
   }
