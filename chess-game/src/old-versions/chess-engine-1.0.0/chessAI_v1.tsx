@@ -39,19 +39,31 @@ const pieceValue = {
 export class chessAI_v1 {
   player: string;
   root: Node | undefined;
+  maxDuration: number = 200;
 
-  constructor(game: Chess, player: string) {
+  constructor(game: Chess, player: string, maxDuration: number) {
     this.player = player;
     this.root = new Node(new State(game.fen()), player, 0);
     this.root.nodeExpansion();
+    console.log(
+      "Hello world! VERSION 1 PLAYING AS: ",
+      this.player === "w" ? " WHITE!" : " BLACK!"
+    );
+    this.maxDuration = maxDuration;
   }
 
   // Monte Carlo Tree Search
   makeMove(game: Chess): Move {
+    // console.log(
+    //   "VERSION 1 PLAYING AS",
+    //   this.player === "w" ? " WHITE!" : " BLACK!",
+    //   " with max duration =",
+    //   this.maxDuration
+    // );
     this.root = new Node(new State(game.fen()), this.player, 0);
-
+    // console.log("VERSION 1 THINKING");
     const startTime = Date.now();
-    const duration = 200;
+    const duration = this.maxDuration;
     let current: Node = this.root;
     current.visits++;
 

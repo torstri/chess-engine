@@ -1,5 +1,6 @@
 export const C = 2;
 export const MAXDEPTH = 3;
+
 export const duration = 500;
 export const ALLOWED_DURATION = 500;
 export const TOTAL_PIECE_VALUE = 39;

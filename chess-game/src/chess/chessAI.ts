@@ -17,6 +17,8 @@ import {
   mobiltyEvaluation,
 } from "./utils/Evaluation";
 
+import { Player } from "./utils/Types";
+
 // Statistics
 let selectionCount = 0;
 let rolloutCount = 0;
@@ -29,11 +31,18 @@ let print = false;
 export class ChessAI {
   player: Color;
   root: Node | undefined;
-
-  constructor(game: Chess, player: Color) {
+  maxDuration: number = 200;
+  constructor(game: Chess, player: Color, maxDuration: number) {
     this.player = player;
     this.root = new Node(new State(game.fen()), player, 0);
     this.root.nodeExpansion(player);
+    this.maxDuration = maxDuration;
+    console.log(
+      "Hello world! CURRENT VERSION PLAYING AS: ",
+      this.player === "w" ? " WHITE!" : " BLACK!",
+      " MAX DURATION = ",
+      this.maxDuration
+    );
   }
 
   // Monte Carlo Tree Search
@@ -43,7 +52,8 @@ export class ChessAI {
     const startTime = Date.now();
     let tempTime = startTime;
     let current: Node = this.root;
-    while (Date.now() - startTime < ALLOWED_DURATION) {
+    while (Date.now() - startTime < this.maxDuration) {
+
       // Tree traversal phase
       if (!current.isLeaf()) {
         current = this.getMaxUCBnode(current);
