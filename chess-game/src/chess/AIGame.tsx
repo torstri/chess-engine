@@ -27,6 +27,9 @@ import {
   TextField,
   InputAdornment,
 } from "@mui/material";
+import { VersionSelect } from "./VersionSelect";
+import { StatisticTable } from "./StatisticTable";
+import { ButtonGroup } from "./ButtonGroup";
 
 function AIGame(): JSX.Element {
   const [game, setGame] = useState<Chess>(new Chess());
@@ -255,81 +258,30 @@ function AIGame(): JSX.Element {
         <Chessboard position={gameFEN} />
       </Grid2>
       <Grid2 size={6}>
-        <div className="button-group">
-          {!start ? (
-            <Button
-              onClick={() => {
-                togglePlay(true, false, !turn);
-              }}
-              variant="outlined"
-            >
-              Start
-            </Button>
-          ) : (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                togglePlay(!start, !pause, !turn);
-              }}
-            >
-              Pause
-            </Button>
-          )}
-          <Button
-            variant="outlined"
-            onClick={() => {
-              navigate("/");
-            }}
-          >
-            Home
-          </Button>
-          <Button variant="outlined" onClick={resetGame}>
-            Reset
-          </Button>
-          <Button variant="outlined" onClick={finishSetup}>
-            Finish Setup
-          </Button>
-        </div>
+        <ButtonGroup
+          start={start}
+          pause={pause}
+          turn={turn}
+          togglePlay={togglePlay}
+          resetGame={resetGame}
+          finishSetup={finishSetup}
+        ></ButtonGroup>
         <Grid2 size={4}>
           <Grid2 container direction="column" spacing={2}>
             {/* Select AI Version */}
             <Grid2>
-              <FormControl fullWidth>
-                <InputLabel id="version-select-label">
-                  Select an AI version for White
-                </InputLabel>
-                <Select
-                  labelId="version-select-label"
-                  value={selectedWhiteVersion}
-                  label="Select an AI version"
-                  onChange={handleWhiteVersionSelect}
-                >
-                  <MenuItem value="current">Version: Current</MenuItem>
-
-                  <MenuItem value="1">Version: 1</MenuItem>
-                  <MenuItem value="2">Version: 2</MenuItem>
-                  <MenuItem value="3">Version: 3</MenuItem>
-                </Select>
-              </FormControl>
+              <VersionSelect
+                description="Select Version for White"
+                setSelectedVersion={setSelectedWhiteVersion}
+                selectedVersion={selectedWhiteVersion}
+              ></VersionSelect>
             </Grid2>
             <Grid2>
-              <FormControl fullWidth>
-                <InputLabel id="version-select-label">
-                  Select an AI version for Black
-                </InputLabel>
-                <Select
-                  labelId="version-select-label"
-                  value={selectedBlackVersion}
-                  label="Select an AI version"
-                  onChange={handleBlackVersionSelect}
-                >
-                  <MenuItem value="current">Version: Current</MenuItem>
-
-                  <MenuItem value="1">Version: 1</MenuItem>
-                  <MenuItem value="2">Version: 2</MenuItem>
-                  <MenuItem value="3">Version: 3</MenuItem>
-                </Select>
-              </FormControl>
+              <VersionSelect
+                description="Select Version for Black"
+                setSelectedVersion={setSelectedBlackVersion}
+                selectedVersion={selectedBlackVersion}
+              ></VersionSelect>
             </Grid2>
 
             {/* Think Time Input */}
@@ -366,47 +318,12 @@ function AIGame(): JSX.Element {
       </Grid2>
 
       <Grid2 size={12}>
-        <span style={{ padding: "10px" }}>Games Played: {gamesPlayed}</span>
-        <TableContainer component={Paper} sx={{ width: "800px" }}>
-          <Table sx={{ minWidth: 650 }} aria-label="simple table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Player</TableCell>
-                <TableCell align="right">Wins</TableCell>
-                <TableCell align="right">Draws</TableCell>
-                <TableCell align="right">Losses</TableCell>
-                <TableCell align="right">Win Rate</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow>
-                <TableCell>White</TableCell>
-                <TableCell align="right">{whiteWins}</TableCell>
-                <TableCell align="right">{draws}</TableCell>
-                <TableCell align="right">{blackWins}</TableCell>
-                <TableCell align="right">
-                  {whiteWins + blackWins + draws != 0
-                    ? getWinRate(Player.White)
-                    : 0}
-                  %
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Black</TableCell>
-                <TableCell align="right">{blackWins}</TableCell>
-                <TableCell align="right">{draws}</TableCell>
-                <TableCell align="right">{whiteWins}</TableCell>
-                <TableCell align="right">
-                  {whiteWins + blackWins + draws != 0
-                    ? getWinRate(Player.Black)
-                    : 0}
-                  %
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
-
+        <StatisticTable
+          whiteWins={whiteWins}
+          blackWins={blackWins}
+          draws={draws}
+          gamesPlayed={gamesPlayed}
+        ></StatisticTable>
         <div>
           White Evaluation ={" "}
           {whiteBot?.root?.state?.totalScore / whiteBot?.root?.visits}
