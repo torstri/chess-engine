@@ -6,39 +6,66 @@ import {
   SelectChangeEvent,
   FormControl,
   InputLabel,
-  TextField,
-  InputAdornment,
+  Grid2,
 } from "@mui/material";
+
 interface VersionSelectProps {
-  description: string;
-  selectedVersion: string;
-  setSelectedVersion: Dispatch<string>;
+  onVersionSelect: (version: string, color: string) => void;
 }
 
 export function VersionSelect({
-  description,
-  selectedVersion,
-  setSelectedVersion,
+  onVersionSelect,
 }: VersionSelectProps): JSX.Element {
-  const handleVersionSelect = (event: SelectChangeEvent) => {
-    setSelectedVersion(event.target.value as string);
-    // console.log("Selected White Version: ", event.target.value);
-  };
-  return (
-    <FormControl fullWidth>
-      <InputLabel id="version-select-label">{description}</InputLabel>
-      <Select
-        labelId="version-select-label"
-        value={selectedVersion}
-        label="Select an AI version"
-        onChange={handleVersionSelect}
-      >
-        <MenuItem value="current">Version: Current</MenuItem>
+  function renderVersion(version: string, index: number) {
+    return (
+      <MenuItem key={index} value={version}>
+        Version: {version}
+      </MenuItem>
+    );
+  }
+  const availableVersions = ["1", "2", "3", "Current", "Player"];
+  const [blackVersion, setBlackVersion] = useState<string>("");
+  const [whiteVersion, setWhiteVersion] = useState<string>("");
 
-        <MenuItem value="1">Version: 1</MenuItem>
-        <MenuItem value="2">Version: 2</MenuItem>
-        <MenuItem value="3">Version: 3</MenuItem>
-      </Select>
-    </FormControl>
+  const handleVersionSelect = (event: SelectChangeEvent, color: string) => {
+    onVersionSelect(event.target.value, color);
+    color == "w"
+      ? setWhiteVersion(event.target.value)
+      : setBlackVersion(event.target.value);
+  };
+
+  return (
+    <Grid2 container spacing={1}>
+      <FormControl fullWidth>
+        <InputLabel id="version-select-label">
+          Select a version for White
+        </InputLabel>
+        <Select
+          labelId="version-select-label"
+          value={whiteVersion}
+          label="Select an AI version"
+          onChange={(e) => {
+            handleVersionSelect(e, "w");
+          }}
+        >
+          {availableVersions.map(renderVersion)}
+        </Select>
+      </FormControl>
+      <FormControl fullWidth>
+        <InputLabel id="version-select-label">
+          Select a version for Black
+        </InputLabel>
+        <Select
+          labelId="version-select-label"
+          value={blackVersion}
+          label="Select an AI version"
+          onChange={(e) => {
+            handleVersionSelect(e, "b");
+          }}
+        >
+          {availableVersions.map(renderVersion)}
+        </Select>
+      </FormControl>
+    </Grid2>
   );
 }

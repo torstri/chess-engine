@@ -47,13 +47,13 @@ export class ChessAI {
 
   // Monte Carlo Tree Search
   makeMove(game: Chess): Move {
+    console.log("Current version making move for:", this.player);
     this.root = new Node(new State(game.fen()), this.player, 0);
 
     const startTime = Date.now();
     let tempTime = startTime;
     let current: Node = this.root;
     while (Date.now() - startTime < this.maxDuration) {
-
       // Tree traversal phase
       if (!current.isLeaf()) {
         current = this.getMaxUCBnode(current);

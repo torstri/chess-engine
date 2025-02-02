@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Chess, Move } from "chess.js";
+import { Chess, Color, Move } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Square } from "react-chessboard/dist/chessboard/types";
 import { ChessAI } from "./chessAI";
@@ -18,6 +18,10 @@ import {
 } from "@mui/material";
 import { Player } from "./utils/Types";
 import { chessAI_v1 } from "../old-versions/chess-engine-1.0.0/chessAI_v1";
+import { VersionSelect } from "./VersionSelect";
+import { chessAI_v2 } from "../old-versions/chess-engine-2.0.0/chessAI_v2";
+import { chessAI_v3 } from "../old-versions/chess-engine-3.0.0/chessAI_v3";
+import { ButtonGroup } from "./ButtonGroup";
 
 // Define the type for the modify function used in safeGameMutate
 type ModifyFunction = (game: Chess) => void;
@@ -33,7 +37,9 @@ function Game(): JSX.Element {
   const [m, setMove] = useState<Move | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
-  const [chessBot, setChessBot] = useState<ChessAI | chessAI_v1>();
+  const [chessBot, setChessBot] = useState<
+    ChessAI | chessAI_v1 | chessAI_v2 | chessAI_v3
+  >();
   const [selectedVersion, setSelectedVersion] = useState<string>("1");
   const [isWhite, setIsWhite] = useState<boolean>(true);
   const [thinkTime, setThinkTime] = useState<string>("1");
@@ -64,6 +70,8 @@ function Game(): JSX.Element {
       setLoading(false);
       return false;
     }
+
+    console.log("Chess bot:", chessBot);
 
     const move = chessBot?.makeMove(game);
 
@@ -201,40 +209,44 @@ function Game(): JSX.Element {
     }
   };
 
+  function setVersion(
+    version: string,
+    allowedThinkTime: number,
+    color: string
+  ) {
+    switch (version) {
+      case "current":
+        return () => new ChessAI(game, color as Color, allowedThinkTime);
+      case "1":
+        return () => new chessAI_v1(game, color, allowedThinkTime);
+      case "2":
+        return () => new chessAI_v2(game, color, allowedThinkTime);
+      case "3":
+        return () => new chessAI_v3(game, color as Color, allowedThinkTime);
+      default:
+        return null;
+    }
+  }
+
   function finishSetup() {
+    // let startPos =
+    //   "rn1qk1nr/pp3ppp/2pbp3/3p1b2/3P4/2PBP3/PP3PPP/RNBQK1NR w KQkq - 1 6";
     const newGame = new Chess();
     setGame(newGame);
     setGameFEN(newGame.fen());
     let allowedThinkTime = parseInt(thinkTime);
-
-    if (isWhite) {
-      console.log("I Want to play as ", isWhite ? "WHITE!" : "BLACK!");
-    } else {
-      console.log("I want to play as ", isWhite ? "WHITE!" : "BLACK!");
+    const playerColor = isWhite ? "w" : "b";
+    const botColor = isWhite ? "b" : "w";
+    const bot = setVersion(selectedVersion, allowedThinkTime, botColor);
+    if (bot) {
+      setChessBot(bot);
     }
 
-    if (selectedVersion === "current") {
-      console.log("I want to play against CURRENT version!");
-      setChessBot(() => {
-        return new ChessAI(
-          game,
-          isWhite ? Player.White : Player.Black,
-          allowedThinkTime
-        );
-      });
+    if (!isWhite) {
+      setTimeout(() => {
+        computeMove();
+      }, 500);
     }
-    if (selectedVersion === "1") {
-      console.log("I want to play against VERSION 1!");
-      setChessBot(() => {
-        return new chessAI_v1(
-          game,
-          isWhite ? Player.White : Player.Black,
-          allowedThinkTime
-        );
-      });
-    }
-
-    console.log("AI can think for: ", thinkTime);
   }
 
   return (
@@ -244,22 +256,11 @@ function Game(): JSX.Element {
         <Grid2 container direction="column" spacing={2}>
           {/* Select AI Version */}
           <Grid2>
-            <FormControl fullWidth>
-              <InputLabel id="version-select-label">
-                Select an AI version
-              </InputLabel>
-              <Select
-                labelId="version-select-label"
-                value={selectedVersion}
-                label="Select an AI version"
-                onChange={handleVersionSelect}
-              >
-                <MenuItem value="current">Version: Current</MenuItem>
-                <MenuItem value="1">Version: 1</MenuItem>
-                <MenuItem value="2">Version: 2</MenuItem>
-                <MenuItem value="3">Version: 3</MenuItem>
-              </Select>
-            </FormControl>
+            <VersionSelect
+              description="Select an AI version"
+              selectedVersion={selectedVersion}
+              setSelectedVersion={setSelectedVersion}
+            ></VersionSelect>
           </Grid2>
 
           {/* Play Color Button */}

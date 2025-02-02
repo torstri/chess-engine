@@ -4,19 +4,15 @@ import { useNavigate } from "react-router-dom";
 interface ButtonGroupProps {
   start: boolean;
   pause: boolean;
-  turn: boolean;
-  togglePlay: (start: boolean, pause: boolean, turn: boolean) => void;
+  togglePlay: (start: boolean, pause: boolean) => void;
   resetGame: () => void;
-  finishSetup: () => void;
 }
 
 export function ButtonGroup({
   start,
   pause,
-  turn,
   togglePlay,
   resetGame,
-  finishSetup,
 }: ButtonGroupProps): JSX.Element {
   const navigate = useNavigate(); // Ensure navigation works inside the component
 
@@ -25,7 +21,7 @@ export function ButtonGroup({
       {!start ? (
         <Button
           onClick={() => {
-            togglePlay(true, false, !turn);
+            togglePlay(true, false);
           }}
           variant="outlined"
         >
@@ -35,7 +31,7 @@ export function ButtonGroup({
         <Button
           variant="outlined"
           onClick={() => {
-            togglePlay(!start, !pause, !turn);
+            togglePlay(!start, !pause);
           }}
         >
           Pause
@@ -51,9 +47,6 @@ export function ButtonGroup({
       </Button>
       <Button variant="outlined" onClick={resetGame}>
         Reset
-      </Button>
-      <Button variant="outlined" onClick={finishSetup}>
-        Finish Setup
       </Button>
     </div>
   );
