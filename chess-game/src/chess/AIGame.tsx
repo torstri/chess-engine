@@ -257,6 +257,7 @@ function AIGame(): JSX.Element {
           pause={pause}
           togglePlay={togglePlay}
           resetGame={resetGame}
+          isHumanGame={false}
         ></ButtonGroup>
       </Grid2>
       <Grid2 size={12}>

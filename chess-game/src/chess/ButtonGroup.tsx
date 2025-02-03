@@ -2,10 +2,11 @@ import { Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
 interface ButtonGroupProps {
-  start: boolean;
-  pause: boolean;
+  start?: boolean;
+  pause?: boolean;
   togglePlay: (start: boolean, pause: boolean) => void;
   resetGame: () => void;
+  isHumanGame: boolean;
 }
 
 export function ButtonGroup({
@@ -13,12 +14,13 @@ export function ButtonGroup({
   pause,
   togglePlay,
   resetGame,
+  isHumanGame,
 }: ButtonGroupProps): JSX.Element {
   const navigate = useNavigate(); // Ensure navigation works inside the component
 
   return (
     <div className="button-group">
-      {!start ? (
+      {!start && !isHumanGame ? (
         <Button
           onClick={() => {
             togglePlay(true, false);

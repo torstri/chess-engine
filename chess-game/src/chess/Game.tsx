@@ -59,11 +59,11 @@ function Game(): JSX.Element {
     }
   }, [m]);
 
-  useEffect(() => {
-    setChessBot(() => {
-      return new ChessAI(game, "b", 200);
-    });
-  }, []);
+  // useEffect(() => {
+  //   setChessBot(() => {
+  //     return new ChessAI(game, "b", 200);
+  //   });
+  // }, []);
 
   function computeMove(): boolean {
     if (game.isGameOver()) {
@@ -71,9 +71,10 @@ function Game(): JSX.Element {
       setLoading(false);
       return false;
     }
-
+    console.log("Bot: ", chessBot);
+    console.log("Game: ", game);
     const move = chessBot?.makeMove(game);
-
+    console.log("Recieved move: ", move);
     if (move) {
       safeGameMutate((game) => {
         try {
@@ -145,67 +146,13 @@ function Game(): JSX.Element {
     setGame(game);
     setGameFEN(game.fen());
 
-    setChessBot(() => {
-      return new ChessAI(game, "b", 200);
-    });
+    // setChessBot(() => {
+    //   return new ChessAI(game, "b", 200);
+    // });
   }
-  function runTests() {
-    let testGame = new Chess();
-
-    let fen_start_position =
-      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    testGame.load(fen_start_position);
-    let testAIWhite = new ChessAI(testGame, "w", 200);
-    let testAIBlack = new ChessAI(testGame, "b", 200);
-
-    let fen_mate_in_1_white = "7k/5ppp/8/8/8/8/5PPP/3R3K w - - 0 1";
-    testGame.load(fen_mate_in_1_white);
-    let fen_mate_in_1_black = "4r2k/5ppp/8/8/8/8/5PPP/7K b - - 0 1";
-    console.log("------------------------Tests----------------------");
-    console.log(
-      "Start position, White: ",
-      testAIWhite.getEvalution(new Chess(fen_start_position)),
-      " and Black: ",
-      testAIBlack.getEvalution(new Chess(fen_start_position))
-    );
-
-    console.log(
-      "Mate in 1 for white, Evaluation by White: ",
-      testAIWhite.getEvalution(new Chess(fen_mate_in_1_white)),
-      " and Black: ",
-      testAIBlack.getEvalution(new Chess(fen_mate_in_1_white))
-    );
-
-    console.log(
-      "Mate in 1 for black, Evaluation by White: ",
-      testAIWhite.getEvalution(new Chess(fen_mate_in_1_black)),
-      " and Black: ",
-      testAIBlack.getEvalution(new Chess(fen_mate_in_1_black))
-    );
-    console.log("------------------------End Tests----------------------");
-
-    let mate_in_1 = new Chess("3R2rk/5ppp/8/8/3Q4/6RP/5PP1/7K w - - 0 1");
-    testAIWhite = new ChessAI(mate_in_1, "w", 200);
-    console.log("Test: ", testAIWhite.makeMove(mate_in_1));
-  }
-
-  const handleVersionSelect = (event: SelectChangeEvent) => {
-    setSelectedVersion(event.target.value as string);
-    console.log("Selected version: ", event.target.value);
-  };
 
   const handleColorClick = () => {
     setIsWhite(!isWhite);
-  };
-
-  const handleThinkTimeChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = event.target.value;
-    // Ensure that the value is either an empty string or a positive integer
-    if (value === "" || /^[0-9]+$/.test(value)) {
-      setThinkTime(value);
-    }
   };
 
   function setVersion(
@@ -229,6 +176,8 @@ function Game(): JSX.Element {
     }
   }
 
+  function dummy(start: boolean, pause: boolean) {}
+
   function finishSetup(
     position: string,
     version: string,
@@ -239,9 +188,6 @@ function Game(): JSX.Element {
     setGameFEN(newGame.fen());
     const botColor = isWhite ? "b" : "w";
     const bot = setVersion(version, allowedDuration, botColor);
-    console.log("Recieved position ", position);
-    console.log("Recieved version: ", version);
-    console.log("REcieved duration: ", allowedDuration);
     if (bot) {
       setChessBot(bot);
     }
@@ -255,32 +201,38 @@ function Game(): JSX.Element {
 
   return (
     <Grid2 container spacing={2} sx={{ padding: "20px" }}>
-      <SetupCard onFinishSetup={finishSetup} isHumanGame={true}></SetupCard>
       {/* First Grid Column with Input Form */}
-      <Grid2 size={4}>
-        <Grid2 container direction="column" spacing={2}>
+      <Grid2 container size={6} spacing={1}>
+        <SetupCard onFinishSetup={finishSetup} isHumanGame={true}></SetupCard>
+        <Grid2>
           {/* Play Color Button */}
-          <Grid2>
-            <Button
-              onClick={handleColorClick}
-              variant="outlined"
-              sx={{
-                backgroundColor: isWhite ? "white" : "black",
-                color: isWhite ? "black" : "white",
-                borderColor: "black",
-                "&:hover": {
-                  backgroundColor: isWhite ? "#f0f0f0" : "#333",
-                },
-              }}
-            >
-              {isWhite ? "Play as White" : "Play as Black"}
-            </Button>
-          </Grid2>
+          <Button
+            onClick={handleColorClick}
+            variant="outlined"
+            sx={{
+              backgroundColor: isWhite ? "white" : "black",
+              color: isWhite ? "black" : "white",
+              borderColor: "black",
+              "&:hover": {
+                backgroundColor: isWhite ? "#f0f0f0" : "#333",
+              },
+            }}
+          >
+            {isWhite ? "Playing as White" : "Playing as Black"}
+          </Button>
+        </Grid2>
+        <Grid2 container spacing={1}>
+          <ButtonGroup
+            pause={false}
+            togglePlay={dummy}
+            resetGame={resetGame}
+            isHumanGame={true}
+          ></ButtonGroup>
         </Grid2>
       </Grid2>
 
       {/* Second Grid Column with Chessboard */}
-      <Grid2 size={5}>
+      <Grid2 size={6}>
         <Chessboard position={gameFEN} onSquareClick={handleSquareClick} />
         <div> Current FEN: {game.fen()}</div>
         {chessBot?.root?.state && (
