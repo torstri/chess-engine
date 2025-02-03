@@ -17,16 +17,18 @@ interface props {
     position: string,
     version: string,
     time: number,
-    color: string
+    color?: string
   ) => void;
-  onNumberOfGamesChange: (numberOfGames: number) => void;
-  isStart: boolean;
+  onNumberOfGamesChange?: (numberOfGames: number) => void;
+  isStart?: boolean;
+  isHumanGame: boolean;
 }
 
 export function SetupCard({
   onFinishSetup,
   onNumberOfGamesChange,
   isStart,
+  isHumanGame,
 }: props): JSX.Element {
   // Allowed evaluation time & number of games
   const [evaluationTime, setEvaluationTime] = useState<number>(0);
@@ -96,13 +98,18 @@ export function SetupCard({
   function finishSetup() {
     onFinishSetup(startPosition, whiteVersion, evaluationTime, "w");
     onFinishSetup(startPosition, blackVersion, evaluationTime, "b");
-    onNumberOfGamesChange(numberOfGames);
+    if (onNumberOfGamesChange) {
+      onNumberOfGamesChange(numberOfGames);
+    }
   }
 
   return (
     <Grid2 container spacing={3}>
       <Grid2 size={12}>
-        <VersionSelect onVersionSelect={handleVersionSelect}></VersionSelect>
+        <VersionSelect
+          isHumanGame={isHumanGame}
+          onVersionSelect={handleVersionSelect}
+        ></VersionSelect>
       </Grid2>
       <Grid2 container spacing={3} size={12}>
         {/* Evaluation Time Input */}
@@ -123,7 +130,7 @@ export function SetupCard({
         </FormControl>
 
         {/* Number of games input */}
-        {!(whiteVersion === "Player" || blackVersion === "Player") && (
+        {!isHumanGame && (
           <FormControl fullWidth>
             <TextField
               id="gameInput"
@@ -155,7 +162,7 @@ export function SetupCard({
       </Grid2>
       <Grid2>
         <Button
-          disabled={!validSetup || isStart}
+          disabled={!validSetup && !isHumanGame}
           variant="outlined"
           onClick={finishSetup}
         >

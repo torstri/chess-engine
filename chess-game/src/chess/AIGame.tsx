@@ -207,7 +207,7 @@ function AIGame(): JSX.Element {
     position: string,
     version: string,
     time: number,
-    color: string
+    color?: string
   ) {
     const newGame = new Chess(position);
     setGame(newGame);
@@ -250,6 +250,7 @@ function AIGame(): JSX.Element {
           onFinishSetup={handleSetupUpdate}
           onNumberOfGamesChange={setNumberOfGames}
           isStart={start}
+          isHumanGame={false}
         />
         <ButtonGroup
           start={start}

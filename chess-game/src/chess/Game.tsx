@@ -22,6 +22,7 @@ import { VersionSelect } from "./VersionSelect";
 import { chessAI_v2 } from "../old-versions/chess-engine-2.0.0/chessAI_v2";
 import { chessAI_v3 } from "../old-versions/chess-engine-3.0.0/chessAI_v3";
 import { ButtonGroup } from "./ButtonGroup";
+import { SetupCard } from "./SetupCard";
 
 // Define the type for the modify function used in safeGameMutate
 type ModifyFunction = (game: Chess) => void;
@@ -70,8 +71,6 @@ function Game(): JSX.Element {
       setLoading(false);
       return false;
     }
-
-    console.log("Chess bot:", chessBot);
 
     const move = chessBot?.makeMove(game);
 
@@ -215,7 +214,7 @@ function Game(): JSX.Element {
     color: string
   ) {
     switch (version) {
-      case "current":
+      case "Current":
         return () => new ChessAI(game, color as Color, allowedThinkTime);
       case "1":
         return () => new chessAI_v1(game, color, allowedThinkTime);
@@ -224,20 +223,25 @@ function Game(): JSX.Element {
       case "3":
         return () => new chessAI_v3(game, color as Color, allowedThinkTime);
       default:
+        console.error("Invalid version: ", version);
+
         return null;
     }
   }
 
-  function finishSetup() {
-    // let startPos =
-    //   "rn1qk1nr/pp3ppp/2pbp3/3p1b2/3P4/2PBP3/PP3PPP/RNBQK1NR w KQkq - 1 6";
-    const newGame = new Chess();
+  function finishSetup(
+    position: string,
+    version: string,
+    allowedDuration: number
+  ) {
+    const newGame = new Chess(position);
     setGame(newGame);
     setGameFEN(newGame.fen());
-    let allowedThinkTime = parseInt(thinkTime);
-    const playerColor = isWhite ? "w" : "b";
     const botColor = isWhite ? "b" : "w";
-    const bot = setVersion(selectedVersion, allowedThinkTime, botColor);
+    const bot = setVersion(version, allowedDuration, botColor);
+    console.log("Recieved position ", position);
+    console.log("Recieved version: ", version);
+    console.log("REcieved duration: ", allowedDuration);
     if (bot) {
       setChessBot(bot);
     }
@@ -251,18 +255,10 @@ function Game(): JSX.Element {
 
   return (
     <Grid2 container spacing={2} sx={{ padding: "20px" }}>
+      <SetupCard onFinishSetup={finishSetup} isHumanGame={true}></SetupCard>
       {/* First Grid Column with Input Form */}
       <Grid2 size={4}>
         <Grid2 container direction="column" spacing={2}>
-          {/* Select AI Version */}
-          <Grid2>
-            <VersionSelect
-              description="Select an AI version"
-              selectedVersion={selectedVersion}
-              setSelectedVersion={setSelectedVersion}
-            ></VersionSelect>
-          </Grid2>
-
           {/* Play Color Button */}
           <Grid2>
             <Button
@@ -280,26 +276,6 @@ function Game(): JSX.Element {
               {isWhite ? "Play as White" : "Play as Black"}
             </Button>
           </Grid2>
-
-          {/* Think Time Input */}
-          <Grid2>
-            <FormControl fullWidth>
-              <TextField
-                id="think-time"
-                label="AI Think Time (ms)"
-                value={thinkTime}
-                onChange={handleThinkTimeChange}
-                variant="outlined"
-                type="text"
-                helperText="Set the time in milliseconds"
-              />
-            </FormControl>
-          </Grid2>
-
-          {/* Run Tests Button */}
-          <Grid2>
-            <Button onClick={runTests}>Run Tests</Button>
-          </Grid2>
         </Grid2>
       </Grid2>
 
@@ -313,27 +289,6 @@ function Game(): JSX.Element {
             {chessBot.root?.state.totalScore / chessBot.root?.visits}
           </div>
         )}
-      </Grid2>
-
-      {/* Third Grid Column with Additional Buttons */}
-      <Grid2 size={3}>
-        <div className="button-group">
-          <Button variant="outlined" disabled={loading} onClick={finishSetup}>
-            Finish Setup
-          </Button>
-          <Button variant="outlined" disabled={loading} onClick={resetGame}>
-            Restart
-          </Button>
-          <Button
-            variant="outlined"
-            disabled={loading}
-            onClick={() => {
-              navigate("/");
-            }}
-          >
-            Home
-          </Button>
-        </div>
       </Grid2>
     </Grid2>
   );
