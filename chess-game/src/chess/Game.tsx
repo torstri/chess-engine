@@ -1,24 +1,12 @@
 import { useEffect, useState } from "react";
-import { Chess, Color, Move } from "chess.js";
+import { Chess, Color, Move, DEFAULT_POSITION } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Square } from "react-chessboard/dist/chessboard/types";
 import { ChessAI } from "./chessAI";
 import Button from "@mui/material/Button";
-import { useNavigate } from "react-router-dom";
 import "../CSS/Game.css";
-import {
-  Select,
-  Grid2,
-  MenuItem,
-  SelectChangeEvent,
-  FormControl,
-  InputLabel,
-  TextField,
-  InputAdornment,
-} from "@mui/material";
-import { Player } from "./utils/Types";
+import { Grid2 } from "@mui/material";
 import { chessAI_v1 } from "../old-versions/chess-engine-1.0.0/chessAI_v1";
-import { VersionSelect } from "./VersionSelect";
 import { chessAI_v2 } from "../old-versions/chess-engine-2.0.0/chessAI_v2";
 import { chessAI_v3 } from "../old-versions/chess-engine-3.0.0/chessAI_v3";
 import { ButtonGroup } from "./ButtonGroup";
@@ -37,14 +25,11 @@ function Game(): JSX.Element {
   const [sourceSelected, setSrcSelected] = useState<boolean>();
   const [m, setMove] = useState<Move | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(false);
-  const navigate = useNavigate();
   const [chessBot, setChessBot] = useState<
     ChessAI | chessAI_v1 | chessAI_v2 | chessAI_v3
   >();
-  const [selectedVersion, setSelectedVersion] = useState<string>("1");
   const [isWhite, setIsWhite] = useState<boolean>(true);
-  const [thinkTime, setThinkTime] = useState<string>("1");
-
+  const [startFen, setStartFen] = useState<string>(DEFAULT_POSITION);
   useEffect(() => {
     setGameFEN(game.fen());
   }, [game]);
@@ -58,12 +43,6 @@ function Game(): JSX.Element {
       setTimeout(computeMove, 200);
     }
   }, [m]);
-
-  // useEffect(() => {
-  //   setChessBot(() => {
-  //     return new ChessAI(game, "b", 200);
-  //   });
-  // }, []);
 
   function computeMove(): boolean {
     if (game.isGameOver()) {
@@ -142,13 +121,11 @@ function Game(): JSX.Element {
     setSelectedPiece(undefined);
     setSrcSelected(false);
 
-    game.reset();
-    setGame(game);
-    setGameFEN(game.fen());
-
-    // setChessBot(() => {
-    //   return new ChessAI(game, "b", 200);
-    // });
+    // game.reset();
+    // game.set
+    const newGame = new Chess(startFen);
+    setGame(newGame);
+    setGameFEN(startFen);
   }
 
   const handleColorClick = () => {
@@ -186,6 +163,7 @@ function Game(): JSX.Element {
     const newGame = new Chess(position);
     setGame(newGame);
     setGameFEN(newGame.fen());
+    setStartFen(position);
     const botColor = isWhite ? "b" : "w";
     const bot = setVersion(version, allowedDuration, botColor);
     if (bot) {

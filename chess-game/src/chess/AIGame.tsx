@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Chess, Color, Move, Square } from "chess.js";
+import { Chess, Color, Move, Square, DEFAULT_POSITION } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { ChessAI } from "./chessAI";
 import { chessAI_v1 } from "../old-versions/chess-engine-1.0.0/chessAI_v1";
@@ -20,7 +20,7 @@ function AIGame(): JSX.Element {
   const [blackBot, setBlackBot] = useState<any>();
   const [isBlackPlayer, setIsBlackPlayer] = useState<boolean>(false);
   const [isWhitePlayer, setIsWhitePlayer] = useState<boolean>(false);
-  const [startFen, setStartFen] = useState<string>();
+  const [startFen, setStartFen] = useState<string>(DEFAULT_POSITION);
 
   const [start, setStart] = useState<boolean>(false);
   const [turn, setTurn] = useState<boolean>(false); // white: true, black: false
@@ -30,7 +30,6 @@ function AIGame(): JSX.Element {
   const [whiteWins, setwhiteWins] = useState<number>(0);
   const [blackWins, setBlackWins] = useState<number>(0);
   const [draws, setDraws] = useState<number>(0);
-
   const [selectedPiece, setSelectedPiece] = useState<string>();
   const [selectedSquare, setSelectedSquare] = useState<Square | undefined>(
     undefined
@@ -38,8 +37,6 @@ function AIGame(): JSX.Element {
   const [sourceSelected, setSrcSelected] = useState<boolean>();
 
   const [turnCounter, setTurnCounter] = useState<number>(0);
-
-  const [thinkTime, setThinkTime] = useState<string>("1");
 
   const turnDuration = 1;
 
