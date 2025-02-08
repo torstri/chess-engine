@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { openings, ChessOpening } from "./StartPositions";
+import { openings, ChessOpening } from "../utils/StartPositions";
 import {
   Button,
   FormControl,
@@ -15,26 +15,34 @@ import { VersionSelect } from "./VersionSelect";
 interface props {
   onFinishSetup: (
     position: string,
-    version: string,
+    whiteVersion: string,
+    blackVersion: string,
     time: number,
     color?: string
   ) => void;
   onNumberOfGamesChange?: (numberOfGames: number) => void;
   isStart?: boolean;
   isHumanGame: boolean;
+  versionColor?: string,
 }
+
+const defaultSettings = {
+  evalTime: 500,
+  numGames: 10,
+  position: openings[0].fen
+};
 
 export function SetupCard({
   onFinishSetup,
   onNumberOfGamesChange,
-  isStart,
   isHumanGame,
+  versionColor,
 }: props): JSX.Element {
   // Allowed evaluation time & number of games
-  const [evaluationTime, setEvaluationTime] = useState<number>(0);
-  const [numberOfGames, setNumberOfGames] = useState<number>(1);
+  const [evaluationTime, setEvaluationTime] = useState<number>(defaultSettings.evalTime);
+  const [numberOfGames, setNumberOfGames] = useState<number>(defaultSettings.numGames);
   const [validSetup, setValidSetup] = useState<boolean>(false);
-  const [startPosition, setStartPosition] = useState<string>("");
+  const [startPosition, setStartPosition] = useState<string>(defaultSettings.position);
 
   // Strings for vesion selection
   const [whiteVersion, setWhiteVersion] = useState<string>("");
@@ -56,26 +64,6 @@ export function SetupCard({
     startPosition,
   ]);
 
-  const handleEvaluationTimeChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = event.target.value;
-    // Ensure that the value is either an empty string or a positive integer
-    if (value === "" || /^[0-9]+$/.test(value)) {
-      setEvaluationTime(Number(value));
-    }
-  };
-
-  const handleNumberOfGamesChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = event.target.value;
-    // Ensure that the value is either an empty string or a positive integer
-    if (value === "" || /^[0-9]+$/.test(value)) {
-      setNumberOfGames(Number(value));
-    }
-  };
-
   function handleVersionSelect(version: string, color: string) {
     switch (color) {
       case "w":
@@ -85,7 +73,6 @@ export function SetupCard({
         setBlackVersion(version);
         break;
       default:
-        console.error("invalid version");
         break;
     }
   }
@@ -96,8 +83,7 @@ export function SetupCard({
   };
 
   function finishSetup() {
-    onFinishSetup(startPosition, whiteVersion, evaluationTime, "w");
-    onFinishSetup(startPosition, blackVersion, evaluationTime, "b");
+    onFinishSetup(startPosition, whiteVersion, blackVersion, evaluationTime);
     if (onNumberOfGamesChange) {
       onNumberOfGamesChange(numberOfGames);
     }
@@ -109,6 +95,7 @@ export function SetupCard({
         <VersionSelect
           isHumanGame={isHumanGame}
           onVersionSelect={handleVersionSelect}
+          versionColor={versionColor}
         ></VersionSelect>
       </Grid2>
       <Grid2 container spacing={3} size={12}>
@@ -117,12 +104,8 @@ export function SetupCard({
           <TextField
             id="think-time"
             label="AI Think Time (ms)"
-            value={evaluationTime === 0 ? "" : evaluationTime} // Show empty when 0
-            onChange={(e) =>
-              setEvaluationTime(
-                e.target.value === "" ? 0 : parseInt(e.target.value, 10)
-              )
-            }
+            defaultValue={defaultSettings.evalTime}
+            onChange={(e) => setEvaluationTime(parseInt(e.target.value, 10)) }
             variant="outlined"
             type="number"
             helperText="Set the time in milliseconds"
@@ -135,12 +118,8 @@ export function SetupCard({
             <TextField
               id="gameInput"
               label="Number of games"
-              value={numberOfGames === 0 ? "" : numberOfGames} // Show empty when 0
-              onChange={(e) =>
-                setNumberOfGames(
-                  e.target.value === "" ? 0 : parseInt(e.target.value, 10)
-                )
-              }
+              defaultValue={defaultSettings.numGames}
+              onChange={(e) => setNumberOfGames(parseInt(e.target.value, 10)) }
               variant="outlined"
               type="number"
               helperText="Set the number of games to be played"
@@ -151,10 +130,10 @@ export function SetupCard({
       <Grid2 size={12}>
         <FormControl fullWidth>
           <InputLabel>Select a start position</InputLabel>
-          <Select value={startPosition} onChange={handleStartPositionChange}>
+          <Select defaultValue={defaultSettings.position} value={startPosition} onChange={handleStartPositionChange}>
             {openings.map((opening: ChessOpening) => (
               <MenuItem key={opening.fen} value={opening.fen}>
-                {opening.name} {/* Show only the name, not the FEN */}
+                {opening.name}
               </MenuItem>
             ))}
           </Select>

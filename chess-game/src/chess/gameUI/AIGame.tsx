@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
-import { Chess, Color, Move, Square, DEFAULT_POSITION } from "chess.js";
+import { Chess, Move, DEFAULT_POSITION } from "chess.js";
 import { Chessboard } from "react-chessboard";
-import { ChessAI } from "./chessAI";
-import { chessAI_v1 } from "../old-versions/chess-engine-1.0.0/chessAI_v1";
-import { chessAI_v2 } from "../old-versions/chess-engine-2.0.0/chessAI_v2";
-import { chessAI_v3 } from "../old-versions/chess-engine-3.0.0/chessAI_v3";
 import { SetupCard } from "./SetupCard";
-import { Player } from "./utils/Types";
-
-import "../CSS/AIGame.css";
+import { Player } from "../utils/Types";
+import "../../CSS/AIGame.css";
 import { Grid2 } from "@mui/material";
 import { StatisticTable } from "./StatisticTable";
 import { ButtonGroup } from "./ButtonGroup";
+import { setVersion } from "./aiVersionMap";
 
 function AIGame(): JSX.Element {
   const [game, setGame] = useState<Chess>(new Chess());
@@ -23,24 +19,15 @@ function AIGame(): JSX.Element {
   const [startFen, setStartFen] = useState<string>(DEFAULT_POSITION);
 
   const [start, setStart] = useState<boolean>(false);
-  const [turn, setTurn] = useState<boolean>(false); // white: true, black: false
   const [pause, setPause] = useState<boolean>(false);
   const [numberOfGames, setNumberOfGames] = useState<number>(1);
   const [gamesPlayed, setGamesPlayed] = useState<number>(0);
   const [whiteWins, setwhiteWins] = useState<number>(0);
   const [blackWins, setBlackWins] = useState<number>(0);
   const [draws, setDraws] = useState<number>(0);
-  const [selectedPiece, setSelectedPiece] = useState<string>();
-  const [selectedSquare, setSelectedSquare] = useState<Square | undefined>(
-    undefined
-  );
-  const [sourceSelected, setSrcSelected] = useState<boolean>();
-
   const [turnCounter, setTurnCounter] = useState<number>(0);
 
   const turnDuration = 1;
-
-  type ModifyFunction = (game: Chess) => void;
 
   useEffect(() => {
     if (start && !pause) {
@@ -58,7 +45,7 @@ function AIGame(): JSX.Element {
         return () => clearTimeout(timerId);
       }
     }
-  }, [turn, pause, start, gameFEN]);
+  }, [pause, start, gameFEN]);
 
   function updateScoreBoard() {
     if (game.isDraw()) {
@@ -104,49 +91,6 @@ function AIGame(): JSX.Element {
     }
   }
 
-  function isPlayerTurn() {
-    return (
-      (isWhitePlayer && turnCounter % 2 == 0) ||
-      (isBlackPlayer && turnCounter % 2 != 0)
-    );
-  }
-
-  // Function to safely mutate the game state
-  function safeGameMutate(modify: ModifyFunction): void {
-    setGame((g) => {
-      const update = new Chess(g.fen()); // Create a new Chess instance with the current position
-      modify(update);
-      return update;
-    });
-  }
-
-  function handleSquareClick(square: Square, piece?: string): void {
-    if (sourceSelected && isPlayerTurn()) {
-      safeGameMutate((game) => {
-        try {
-          game.move({
-            from: selectedSquare,
-            to: square,
-            promotion: "q",
-          } as Move);
-          setGame(game);
-        } catch (e) {
-          console.error(e);
-          setSelectedSquare(undefined);
-          setSelectedPiece(undefined);
-          setSrcSelected(false);
-          return;
-        }
-
-        setTurnCounter(turnCounter + 1);
-      });
-    } else if (piece != undefined) {
-      setSelectedSquare(square);
-      setSelectedPiece(piece);
-      setSrcSelected(true);
-    }
-  }
-
   function moveUpdate(move?: Move): boolean {
     try {
       game.move({
@@ -180,29 +124,10 @@ function AIGame(): JSX.Element {
     setTurnCounter(0);
   }
 
-  function setVersion(
-    version: string,
-    allowedThinkTime: number,
-    color: string,
-    game: Chess
-  ) {
-    switch (version) {
-      case "Current":
-        return () => new ChessAI(game, color as Color, allowedThinkTime);
-      case "1":
-        return () => new chessAI_v1(game, color, allowedThinkTime);
-      case "2":
-        return () => new chessAI_v2(game, color, allowedThinkTime);
-      case "3":
-        return () => new chessAI_v3(game, color as Color, allowedThinkTime);
-      default: // We have chosen player
-        return undefined;
-    }
-  }
-
   function handleSetupUpdate(
     position: string,
-    version: string,
+    whiteVersion: string,
+    blackVersion: string,
     time: number,
     color?: string
   ) {
@@ -211,38 +136,29 @@ function AIGame(): JSX.Element {
     setGameFEN(position);
     setStartFen(position);
 
-    switch (version) {
-      case "Player":
-        if (version === "Player" && color === "w") {
-          setIsWhitePlayer(true);
-          setIsBlackPlayer(false);
-        }
-
-        if (version === "Player" && color === "b") {
-          setIsBlackPlayer(true);
-          setIsWhitePlayer(false);
-        }
-
-        togglePlay(false, true);
-        break;
-      default:
-        if (color === "w") {
-          setWhiteBot(setVersion(version, time, "w", newGame));
-        }
-
-        if (color === "b") {
-          setBlackBot(setVersion(version, time, "b", newGame));
-        }
-        break;
-    }
+    setWhiteBot(setVersion(newGame, whiteVersion, time, "w"))
+    setBlackBot(setVersion(newGame, blackVersion, time, "b"))
   }
 
   return (
-    <Grid2 container spacing={2} sx={{ padding: "20px" }}>
-      <Grid2 size={6}>
-        <Chessboard position={gameFEN} onSquareClick={handleSquareClick} />
-      </Grid2>
-      <Grid2 size={6}>
+    <div
+      className="GameContainer"
+      style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}
+    >
+      <div style={{ border: "solid", margin: "10px" }}>
+        <Chessboard
+          boardWidth={800}
+          position={gameFEN}
+        />
+      </div>
+      <Grid2
+        style={{
+          minWidth: "30%",
+          maxWidth: "30%",
+          flexShrink: 0,
+          padding: "10px",
+        }}
+      >
         <SetupCard
           onFinishSetup={handleSetupUpdate}
           onNumberOfGamesChange={setNumberOfGames}
@@ -255,25 +171,23 @@ function AIGame(): JSX.Element {
           togglePlay={togglePlay}
           resetGame={resetGame}
           isHumanGame={false}
-        ></ButtonGroup>
-      </Grid2>
-      <Grid2 size={12}>
+          disabled={!(whiteBot && blackBot)}
+        />
         <StatisticTable
           whiteWins={whiteWins}
           blackWins={blackWins}
           draws={draws}
           gamesPlayed={gamesPlayed}
-        ></StatisticTable>
-        <div>
-          White Evaluation ={" "}
-          {whiteBot?.root?.state?.totalScore / whiteBot?.root?.visits}
-        </div>
-        <div>
-          Black Evaluation ={" "}
-          {blackBot?.root?.state?.totalScore / blackBot?.root?.visits}
-        </div>
+        />
       </Grid2>
-    </Grid2>
+      <div style={{ width: "90%", display: "flex", justifyContent: "center" }}>
+        White Evaluation ={" "}
+        {whiteBot?.root?.state?.totalScore / whiteBot?.root?.visits}
+        <br></br>
+        Black Evaluation ={" "}
+        {blackBot?.root?.state?.totalScore / blackBot?.root?.visits}
+      </div>
+    </div>
   );
 }
 
