@@ -5,6 +5,7 @@ import {
   END_GAME_PIECE_AMOUNT,
   MOBILITY_WEIGHT,
   MATERIAL_WEIGHT,
+  EVAL_LIMIT,
 } from "./Constants";
 import { PSQT_MAP, getSquareInTable, PSQT } from "./PSQT";
 
@@ -42,7 +43,7 @@ export function evaluateMove(game: Chess, move: Move, player: Color): number {
         ? pieceValue[move.captured] * 10
         : -10 * pieceValue[move.captured];
 
-  return moveScore;
+  return limitEval(moveScore);
 }
 
 export function evaluateTerminalState(game: Chess, player: Color): number {
@@ -63,7 +64,11 @@ export function evaluateState(game: Chess, player: Color): number {
   const mobilityScore = newMobilityEvaluation(game, player);
   const materialScore = materialEvaluation(game, player);
 
-  return MATERIAL_WEIGHT * materialScore + mobilityScore * MOBILITY_WEIGHT;
+  return limitEval(MATERIAL_WEIGHT * materialScore + mobilityScore * MOBILITY_WEIGHT);
+}
+
+export function limitEval(score: number) {
+  return Math.max(-EVAL_LIMIT, Math.min(EVAL_LIMIT, score));
 }
 
 export function mobiltyEvaluation(

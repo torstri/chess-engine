@@ -4,7 +4,6 @@ import { State } from "./State";
 import {
   C,
   MAXDEPTH,
-  ALLOWED_DURATION,
   MOBILITY_WEIGHT,
   MATERIAL_WEIGHT,
 } from "./utils/Constants";
@@ -12,18 +11,13 @@ import {
   evaluateTerminalState,
   evaluateState,
   evaluateMove,
-  evaluateMobility,
   materialEvaluation,
   mobiltyEvaluation,
 } from "./utils/Evaluation";
 
-import { Player } from "./utils/Types";
-
 // Statistics
-let selectionCount = 0;
 let rolloutCount = 0;
 let expansionCount = 0;
-let selectionTime = 0;
 let rolloutTime = 0;
 let expansionTime = 0;
 let print = false;
@@ -47,11 +41,9 @@ export class ChessAI {
 
   // Monte Carlo Tree Search
   makeMove(game: Chess): Move {
-    console.log("Current version making move for:", this.player);
     this.root = new Node(new State(game.fen()), this.player, 0);
 
     const startTime = Date.now();
-    let tempTime = startTime;
     let current: Node = this.root;
     while (Date.now() - startTime < this.maxDuration) {
       // Tree traversal phase
@@ -59,16 +51,15 @@ export class ChessAI {
         current = this.getMaxUCBnode(current);
       } else if (current.visits > 0) {
         // Node expansion phase
-        tempTime = Date.now();
+
         current.nodeExpansion(this.player);
-        expansionTime += Date.now() - tempTime;
 
         expansionCount++;
       } else {
         // Rollout
-        tempTime = Date.now();
+
         this.propogate(current, this.rollout(new Chess(current.state.fen), 0));
-        rolloutTime += Date.now() - tempTime;
+
         rolloutCount++;
 
         current = this.root;
@@ -123,14 +114,19 @@ export class ChessAI {
   }
 
   getMaxUCBnode(node: Node): Node {
-    let maxUSB = -Infinity;
+    const isOpponent = node.turn !== this.player;
+    let optUCB = isOpponent ? Infinity : -Infinity;
     let selectedChild: Node | undefined;
 
     node.children.forEach((child: Node) => {
-      const ucb = this.ucb1(child.state.totalScore, node.visits, child.visits);
-      if (ucb > maxUSB) {
+      const ucb = this.ucb1(child.state.totalScore, node.visits, child.visits, isOpponent);
+      
+      if ((ucb > optUCB) && !isOpponent) {
         selectedChild = child;
-        maxUSB = ucb;
+        optUCB = ucb;
+      } else if ((ucb < optUCB) && isOpponent){
+        selectedChild = child;
+        optUCB = ucb;
       }
     });
 
@@ -175,10 +171,14 @@ export class ChessAI {
     return this.rollout(game, depth + 1, randomMove);
   }
 
-  ucb1(score: number, N: number, n: number): number {
-    if (n == 0 || N == 0) return Infinity;
+  ucb1(score: number, N: number, n: number, isOpponent: boolean): number {
 
-    return score / n + C * Math.sqrt(Math.log(N) / n);
+    if(n === 0) return isOpponent ? -Infinity : Infinity;
+
+    const exploration = C * Math.sqrt(Math.log(N) / n); 
+    const averageScore = score / n;
+
+    return isOpponent ? averageScore - exploration : averageScore + exploration;
   }
 
   getAttackedPiece(game: Chess, move: Move): PieceSymbol | undefined {

@@ -1,4 +1,4 @@
-import { evaluateMove } from "../../chess/utils/Evaluation";
+import { evaluateMove, limitEval } from "../../chess/utils/Evaluation";
 import { Chess } from "chess.js";
 import { Player, stateBias } from "../../chess/utils/Types";
 import { pieceValue } from "../../chess/utils/Constants";
@@ -27,6 +27,6 @@ describe("Returns move evaluation", () => {
         const bishop = "b";
         const game = new Chess(fen);
         const move = game.move(m);
-        expect(evaluateMove(game, move, Player.White)).toEqual(pieceValue[bishop] * 10);
+        expect(evaluateMove(game, move, Player.White)).toEqual(limitEval(pieceValue[bishop] * 10));
     });
 });

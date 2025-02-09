@@ -63,7 +63,7 @@ export class Node {
     }
 
     addScore(score: number): void {
-      this.state.totalScore += score;
+      this.state.totalScore = this.state.totalScore + score;
     }
   
     // Utility method to display the node details (for debugging)
