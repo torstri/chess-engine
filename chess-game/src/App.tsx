@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router";
 import Home from "./home/Home";
-import Game from "./chess/Game";
-import AIvsAI from "./chess/AIGame";
+import Game from "./chess/gameUI/Game";
+import AIvsAI from "./chess/gameUI/AIGame";
 
 function App(): JSX.Element {
   return (

@@ -7,7 +7,7 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import { Player } from "./utils/Types";
+import { Player } from "../utils/Types";
 
 interface StatisticTableProps {
   whiteWins: number;

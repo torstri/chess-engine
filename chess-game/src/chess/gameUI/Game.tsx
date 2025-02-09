@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, version } from "react";
 import { Chess, Color, Move, DEFAULT_POSITION } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { Square } from "react-chessboard/dist/chessboard/types";
-import { ChessAI } from "./chessAI";
 import Button from "@mui/material/Button";
-import "../CSS/Game.css";
+import "../../CSS/Game.css";
 import { Grid2 } from "@mui/material";
-import { chessAI_v1 } from "../old-versions/chess-engine-1.0.0/chessAI_v1";
-import { chessAI_v2 } from "../old-versions/chess-engine-2.0.0/chessAI_v2";
-import { chessAI_v3 } from "../old-versions/chess-engine-3.0.0/chessAI_v3";
-import { ButtonGroup } from "./ButtonGroup";
+import { ChessAI } from "../chessAI";
+import { chessAI_v1 } from "../../old-versions/chess-engine-1.0.0/chessAI_v1";
+import { chessAI_v2 } from "../../old-versions/chess-engine-2.0.0/chessAI_v2";
+import { chessAI_v3 } from "../../old-versions/chess-engine-3.0.0/chessAI_v3";
+import { ButtonGroup } from "../gameUI/ButtonGroup";
 import { SetupCard } from "./SetupCard";
+import { setVersion } from "./aiVersionMap";
 
 // Define the type for the modify function used in safeGameMutate
 type ModifyFunction = (game: Chess) => void;
@@ -24,12 +25,14 @@ function Game(): JSX.Element {
   );
   const [sourceSelected, setSrcSelected] = useState<boolean>();
   const [m, setMove] = useState<Move | undefined>(undefined);
-  const [loading, setLoading] = useState<boolean>(false);
   const [chessBot, setChessBot] = useState<
     ChessAI | chessAI_v1 | chessAI_v2 | chessAI_v3
   >();
-  const [isWhite, setIsWhite] = useState<boolean>(true);
+  const [isPlayerWhite, setIsPlayerWhite] = useState<boolean>(true);
   const [startFen, setStartFen] = useState<string>(DEFAULT_POSITION);
+  const [botSettings, setBotSettings] = useState<{version: string, time: number}>({version: "current", time: 500});
+  
+  
   useEffect(() => {
     setGameFEN(game.fen());
   }, [game]);
@@ -40,20 +43,17 @@ function Game(): JSX.Element {
       setSelectedPiece(undefined);
       setSrcSelected(false);
 
-      setTimeout(computeMove, 200);
+      setTimeout(() => { computeMove(chessBot) }, 200);
     }
   }, [m]);
 
-  function computeMove(): boolean {
+  function computeMove(bot: any): boolean {
     if (game.isGameOver()) {
       console.log("Game Over");
-      setLoading(false);
       return false;
     }
-    console.log("Bot: ", chessBot);
-    console.log("Game: ", game);
-    const move = chessBot?.makeMove(game);
-    console.log("Recieved move: ", move);
+
+    const move = bot.makeMove(game);
     if (move) {
       safeGameMutate((game) => {
         try {
@@ -75,8 +75,6 @@ function Game(): JSX.Element {
 
     setGameFEN(game.fen());
 
-    setLoading(false);
-
     return true;
   }
 
@@ -91,7 +89,6 @@ function Game(): JSX.Element {
 
   function handleSquareClick(square: Square, piece?: string): void {
     if (sourceSelected) {
-      setLoading(true);
       safeGameMutate((game) => {
         try {
           setMove(
@@ -126,101 +123,94 @@ function Game(): JSX.Element {
     const newGame = new Chess(startFen);
     setGame(newGame);
     setGameFEN(startFen);
-  }
 
-  const handleColorClick = () => {
-    setIsWhite(!isWhite);
-  };
-
-  function setVersion(
-    version: string,
-    allowedThinkTime: number,
-    color: string
-  ) {
-    switch (version) {
-      case "Current":
-        return () => new ChessAI(game, color as Color, allowedThinkTime);
-      case "1":
-        return () => new chessAI_v1(game, color, allowedThinkTime);
-      case "2":
-        return () => new chessAI_v2(game, color, allowedThinkTime);
-      case "3":
-        return () => new chessAI_v3(game, color as Color, allowedThinkTime);
-      default:
-        console.error("Invalid version: ", version);
-
-        return null;
+    if (!isPlayerWhite) {
+      computeMove(chessBot);
     }
   }
 
-  function dummy(start: boolean, pause: boolean) {}
-
   function finishSetup(
     position: string,
-    version: string,
+    whiteVersion: string,
+    blackVersion: string,
     allowedDuration: number
   ) {
     const newGame = new Chess(position);
     setGame(newGame);
     setGameFEN(newGame.fen());
     setStartFen(position);
-    const botColor = isWhite ? "b" : "w";
-    const bot = setVersion(version, allowedDuration, botColor);
-    if (bot) {
-      setChessBot(bot);
-    }
+    setBotSettings({version: isPlayerWhite ? blackVersion : whiteVersion, time: allowedDuration})
 
-    if (!isWhite) {
-      setTimeout(() => {
-        computeMove();
-      }, 500);
-    }
+    setChessBot(() => {
+      const newBot = setVersion(
+                newGame,
+                isPlayerWhite ? blackVersion : whiteVersion,
+                allowedDuration,
+                isPlayerWhite ? "b" : "w"
+              )
+
+      if (!isPlayerWhite) {
+        computeMove(newBot);
+      }
+
+      return newBot;
+    });
+    
   }
 
   return (
-    <Grid2 container spacing={2} sx={{ padding: "20px" }}>
-      {/* First Grid Column with Input Form */}
-      <Grid2 container size={6} spacing={1}>
-        <SetupCard onFinishSetup={finishSetup} isHumanGame={true}></SetupCard>
-        <Grid2>
-          {/* Play Color Button */}
-          <Button
-            onClick={handleColorClick}
-            variant="outlined"
-            sx={{
-              backgroundColor: isWhite ? "white" : "black",
-              color: isWhite ? "black" : "white",
-              borderColor: "black",
-              "&:hover": {
-                backgroundColor: isWhite ? "#f0f0f0" : "#333",
-              },
-            }}
-          >
-            {isWhite ? "Playing as White" : "Playing as Black"}
-          </Button>
-        </Grid2>
-        <Grid2 container spacing={1}>
-          <ButtonGroup
-            pause={false}
-            togglePlay={dummy}
-            resetGame={resetGame}
-            isHumanGame={true}
-          ></ButtonGroup>
-        </Grid2>
+    <div
+      className="GameContainer"
+      style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}
+    >
+      <div className="ChessBoard" style={{ border: "solid", margin: "10px" }}>
+        <Chessboard
+          boardWidth={800}
+          position={gameFEN}
+          onSquareClick={handleSquareClick}
+          boardOrientation={isPlayerWhite ? "white" : "black"}
+        />
+      </div>
+      <Grid2
+        style={{
+          minWidth: "30%",
+          maxWidth: "30%",
+          flexShrink: 0,
+          padding: "10px",
+        }}
+      >
+        <SetupCard onFinishSetup={finishSetup} isHumanGame={true} versionColor={isPlayerWhite ? "b" : "w"}></SetupCard>
+        <Button
+          onClick={() => { setIsPlayerWhite(!isPlayerWhite) }}
+          variant="outlined"
+          sx={{
+            backgroundColor: isPlayerWhite ? "white" : "black",
+            color: isPlayerWhite ? "black" : "white",
+            borderColor: "black",
+            "&:hover": {
+              backgroundColor: isPlayerWhite ? "#f0f0f0" : "#333",
+            },
+            marginTop: "10px",
+          }}
+        >
+          {isPlayerWhite ? "Playing as White" : "Playing as Black"}
+        </Button>
+        <ButtonGroup
+          pause={false}
+          togglePlay={() => {}}
+          resetGame={resetGame}
+          isHumanGame={true}
+          disabled={false}
+        ></ButtonGroup>
       </Grid2>
-
-      {/* Second Grid Column with Chessboard */}
-      <Grid2 size={6}>
-        <Chessboard position={gameFEN} onSquareClick={handleSquareClick} />
-        <div> Current FEN: {game.fen()}</div>
-        {chessBot?.root?.state && (
-          <div>
-            Evaluation ={" "}
-            {chessBot.root?.state.totalScore / chessBot.root?.visits}
-          </div>
-        )}
-      </Grid2>
-    </Grid2>
+      {chessBot?.root?.state && (
+        <div
+          style={{ width: "100%", display: "flex", justifyContent: "center" }}
+        >
+          Evaluation = {chessBot.root?.state.totalScore / chessBot.root?.visits}
+        </div>
+      )}
+    </div>
   );
 }
 

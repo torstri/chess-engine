@@ -1,23 +1,29 @@
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import "../CSS/Game.css";
+import { useState } from "react";
+import "../../CSS/Game.css";
 import {
   Select,
   MenuItem,
-  SelectChangeEvent,
   FormControl,
   InputLabel,
   Grid2,
 } from "@mui/material";
+import { aiVersions } from "./aiVersionMap";
 
 interface VersionSelectProps {
   onVersionSelect: (version: string, color: string) => void;
   isHumanGame: boolean;
+  versionColor?: string;
 }
 
 export function VersionSelect({
   onVersionSelect,
   isHumanGame,
+  versionColor,
 }: VersionSelectProps): JSX.Element {
+
+  const [blackVersion, setBlackVersion] = useState<string>("");
+  const [whiteVersion, setWhiteVersion] = useState<string>("");
+  
   function renderVersion(version: string, index: number) {
     return (
       <MenuItem key={index} value={version}>
@@ -25,33 +31,32 @@ export function VersionSelect({
       </MenuItem>
     );
   }
-  const availableVersions = ["1", "2", "3", "Current"];
-  const [blackVersion, setBlackVersion] = useState<string>("");
-  const [whiteVersion, setWhiteVersion] = useState<string>("");
+  
+  function handleVersionSelect(version: string, color: string): void {
+    
+    onVersionSelect(version, color);
+    
+    if(color === "w") setWhiteVersion(version);
+    if(color === "b") setBlackVersion(version);
 
-  const handleVersionSelect = (event: SelectChangeEvent, color: string) => {
-    onVersionSelect(event.target.value, color);
-    color == "w"
-      ? setWhiteVersion(event.target.value)
-      : setBlackVersion(event.target.value);
   };
 
   return (
     <Grid2 container spacing={1}>
-      {isHumanGame ? (
+      {isHumanGame && versionColor ? (
         <FormControl fullWidth>
           <InputLabel id="version-select-label">
             Select an AI version
           </InputLabel>
           <Select
             labelId="version-select-label"
-            value={whiteVersion}
+            value={versionColor === "w" ? whiteVersion : blackVersion}
             label="Select an AI version"
             onChange={(e) => {
-              handleVersionSelect(e, "w");
+              handleVersionSelect(e.target.value, versionColor);
             }}
           >
-            {availableVersions.map(renderVersion)}
+            {Object.keys(aiVersions).map(renderVersion)}
           </Select>
         </FormControl>
       ) : (
@@ -65,10 +70,10 @@ export function VersionSelect({
               value={whiteVersion}
               label="Select an AI version"
               onChange={(e) => {
-                handleVersionSelect(e, "w");
+                handleVersionSelect(e.target.value, "w");
               }}
             >
-              {availableVersions.map(renderVersion)}
+              {Object.keys(aiVersions).map(renderVersion)}
             </Select>
           </FormControl>
           <FormControl fullWidth>
@@ -80,10 +85,10 @@ export function VersionSelect({
               value={blackVersion}
               label="Select an AI version"
               onChange={(e) => {
-                handleVersionSelect(e, "b");
+                handleVersionSelect(e.target.value, "b");
               }}
             >
-              {availableVersions.map(renderVersion)}
+              {Object.keys(aiVersions).map(renderVersion)}
             </Select>
           </FormControl>
         </>
