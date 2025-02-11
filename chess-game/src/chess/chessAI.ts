@@ -19,19 +19,25 @@ import {
 
 import { Player } from "./utils/Types";
 
-// Statistics
-let selectionCount = 0;
-let rolloutCount = 0;
-let expansionCount = 0;
-let selectionTime = 0;
-let rolloutTime = 0;
-let expansionTime = 0;
-let print = false;
-
 export class ChessAI {
   player: Color;
   root: Node | undefined;
   maxDuration: number = 200;
+
+  iterations: number = 0;
+
+  selectionCounter: number = 0;
+  selectionTime: number = 0;
+
+  expansionCounter: number = 0;
+  expansionTime: number = 0;
+
+  rolloutCounter: number = 0;
+  rolloutTime: number = 0;
+
+  propagationCounter: number = 0;
+  propagationTime: number = 0;
+
   constructor(game: Chess, player: Color, maxDuration: number) {
     this.player = player;
     this.root = new Node(new State(game.fen()), player, 0);
@@ -45,92 +51,157 @@ export class ChessAI {
     );
   }
 
+  // Selects a child node until we reach a terminal or leaf node
+  // Nodes are select to maximize UCB formula
+  selection(node: Node): Node {
+    let leafFound = false;
+    let iterations = 0;
+    while (!leafFound) {
+      if (node.isLeaf() || node.isTerminal()) {
+        leafFound = true;
+      } else {
+        node = this.getMaxUCBnode(node);
+      }
+      iterations++;
+    }
+    // console.log("In selection, went to depth: ", node.depth);
+    return node;
+  }
+
   // Monte Carlo Tree Search
   makeMove(game: Chess): Move {
-    console.log("Current version making move for:", this.player);
-    this.root = new Node(new State(game.fen()), this.player, 0);
+    // console.log("Current version making move for:", this.player);
+    let tempTime = 0;
+    let statistics = true;
+
+    this.iterations = 0;
+
+    // this.selectionCounter = 0;
+    // this.selectionTime = 0;
+
+    this.expansionCounter = 0;
+    this.expansionTime = 0;
+
+    this.rolloutCounter = 0;
+    this.rolloutTime = 0;
+
+    // this.propagationCounter = 0;
+    // this.propagationTime = 0;
 
     const startTime = Date.now();
-    let tempTime = startTime;
-    let current: Node = this.root;
+
+    this.root = new Node(new State(game.fen()), this.player, 0);
+
+    this.root.nodeExpansion(this.player);
+    this.expansionTime += Date.now() - startTime;
+    this.expansionCounter++;
+
     while (Date.now() - startTime < this.maxDuration) {
-      // Tree traversal phase
-      if (!current.isLeaf()) {
-        current = this.getMaxUCBnode(current);
-      } else if (current.visits > 0) {
-        // Node expansion phase
-        tempTime = Date.now();
-        current.nodeExpansion(this.player);
-        expansionTime += Date.now() - tempTime;
+      // 1. Selection
+      // tempTime = Date.now();
+      let leafNode = this.selection(this.root);
+      // this.selectionTime += Date.now() - tempTime;
+      // this.selectionCounter++;
 
-        expansionCount++;
-      } else {
-        // Rollout
+      // 2. Expansion (if visited before, no children and not terminal)
+      if (
+        leafNode.children.length === 0 &&
+        leafNode.visits > 0 &&
+        !leafNode.isTerminal()
+      ) {
         tempTime = Date.now();
-        this.propogate(current, this.rollout(new Chess(current.state.fen), 0));
-        rolloutTime += Date.now() - tempTime;
-        rolloutCount++;
-
-        current = this.root;
+        leafNode.nodeExpansion(this.player);
+        this.expansionTime += Date.now() - tempTime;
+        this.expansionCounter++;
+        // find a new leaf;
+        if (leafNode.children.length > 0) {
+          leafNode = this.getMaxUCBnode(leafNode);
+        }
       }
+
+      // 3. Rollout
+      tempTime = Date.now();
+      let gameCopy = new Chess(leafNode.state.fen);
+      const rolloutResult = this.rollout(gameCopy, 0);
+      this.rolloutTime += Date.now() - tempTime;
+      this.rolloutCounter++;
+
+      // 4. Propogation
+      // tempTime = Date.now();
+      this.propagate(leafNode, rolloutResult);
+      // this.propagationTime += Date.now() - tempTime;
+      // this.propagationCounter++;
+
+      this.iterations++;
     }
 
-    this.printStatistics(game);
-
-    rolloutCount = 0;
-    expansionCount = 0;
-    rolloutTime = 0;
-    expansionTime = 0;
+    if (statistics) {
+      this.showStatistics();
+    }
 
     return this.getBestMove(this.root);
   }
 
+  // When done performing mcts
+  // We return the node which accumulted the highest score
   getBestMove(root: Node): Move {
     let move: Move | undefined;
     let maxScore = -Infinity;
-    root.children.forEach((ch: Node) => {
-      if (ch.state.totalScore > maxScore) {
-        move = ch.move;
-        maxScore = ch.state.totalScore;
+    let mostVisits = -Infinity;
+
+    // We should choose between one of these
+
+    // root.children.forEach((ch: Node) => {
+    //   if (ch.totalScore > maxScore) {
+    //     move = ch.move;
+    //     maxScore = ch.totalScore;
+    //   }
+    // });
+
+    // This one seems very promising but for some reason
+    // Ends up in weird local optima
+    // Either it is because the expansion rate drops
+    // Or because the rollout time shoots
+    root.children.forEach((child) => {
+      if (child.visits > mostVisits) {
+        move = child.move;
+        mostVisits = child.visits;
       }
     });
 
+    // root.children.forEach((child) => {
+    //   let avergageScore = child.totalScore / child.visits;
+    //   if (avergageScore) {
+    //     move = child.move;
+    //     maxScore = avergageScore;
+    //   }
+    // });
+
     if (!move) throw new Error("No move found");
 
-    if (print) {
-      console.log("------------ New Move --------------");
-      const visits = this.root?.visits;
-      const score = this.root?.state.totalScore;
-      if (visits && score && print) {
-        console.log("Best move found: ", move);
-        console.log(
-          "With evaluated position : ",
-          score,
-          " and mean: ",
-          score / visits
-        );
-      }
-      if (this.root?.state?.totalScore && this.root?.visits) {
-        console.log(
-          "Evaluation of given position: ",
-          this.root?.state?.totalScore / this.root?.visits
-        );
-      }
-      console.log("-------------- End Move --------------");
-    }
-
+    // We might be using to much memory (??)
+    // so we need to make some space
+    let testTime = Date.now();
+    let nodeNumber = this.root?.clearTree();
+    testTime = Date.now() - testTime;
+    console.log(
+      "Time to clear tree: ",
+      testTime,
+      " number of node: ",
+      nodeNumber
+    );
     return move;
   }
 
+  // Returns the child node with the highest UCB value
   getMaxUCBnode(node: Node): Node {
-    let maxUSB = -Infinity;
+    let maxUCB = -Infinity;
     let selectedChild: Node | undefined;
-
     node.children.forEach((child: Node) => {
-      const ucb = this.ucb1(child.state.totalScore, node.visits, child.visits);
-      if (ucb > maxUSB) {
+      const ucb = this.ucb1(child.totalScore, node.visits, child.visits);
+      if (ucb > maxUCB) {
         selectedChild = child;
-        maxUSB = ucb;
+        maxUCB = ucb;
       }
     });
 
@@ -143,25 +214,61 @@ export class ChessAI {
     return node;
   }
 
-  propogate(current: Node, score: number): void {
+  // Alternative way of doing max ucb
+  getMaxUCBnode1(node: Node): Node {
+    const selectedChild = node.children.reduce(
+      (best, child) =>
+        this.ucb1(child.totalScore, node.visits, child.visits) >
+        this.ucb1(best.totalScore, node.visits, best.visits)
+          ? child
+          : best,
+      node.children[0]
+    );
+
+    if (!selectedChild) throw new Error("No child found");
+    return selectedChild;
+  }
+
+  // Propogates a value from a node to the root
+  propagate(current: Node, score: number): void {
+    // On nodes with even depths, we are making moves
+    // On nodes with odd depths, opponent is making moves
+    // We want to maximize UCB, opponent wants to minimize UCB
+
+    // Thus nodes with an odd depth will get +score, since in the parent node
+    // the depth will be even, we are making a move and want to chose the
+    // one with the highest score
+
+    // Nodes with an even depth will get -score, since in the parent node
+    // the depth will be odd, meaning that the oppoent is about to make a move
+    // and he wants to minimize our position i.e. chosing the child node with the lowest score
+    // this is the same as choosing the node with the highest score if the scores are flipped
+
+    score = current.depth % 2 === 0 ? -score : score;
     current.addScore(score);
     current.visits++;
+
     while (current.parent) {
       current = current.parent;
+      score = -score;
       current.addScore(score);
       current.visits++;
     }
   }
 
+  // Plays a set of random moves to simulate play from a given node
   rollout(game: Chess, depth: number, move?: Move): number {
+    // Base case: we have reached a terminal state
     if (game.isGameOver()) return evaluateTerminalState(game, this.player);
 
+    // Base care: not terminal but exceeded depth
     if (depth > MAXDEPTH) {
       let score = evaluateState(game, this.player);
       score += move ? evaluateMove(game, move, this.player) : 0;
       return score;
     }
 
+    // Otherwise continue rollout
     const randomIndex = Math.floor(Math.random() * game.moves().length);
     const randomMove = game.moves({ verbose: true })[randomIndex];
 
@@ -175,82 +282,55 @@ export class ChessAI {
     return this.rollout(game, depth + 1, randomMove);
   }
 
+  // Formula used to determine the UCB value of a node
   ucb1(score: number, N: number, n: number): number {
     if (n == 0 || N == 0) return Infinity;
 
-    return score / n + C * Math.sqrt(Math.log(N) / n);
+    const annealing = 2 - 0.1 * this.iterations;
+
+    let explorationConstant = Math.sqrt(Math.log(N) / n);
+
+    explorationConstant =
+      annealing > 0
+        ? explorationConstant * annealing * 2 * C
+        : explorationConstant;
+
+    return score / n + explorationConstant;
   }
 
-  getAttackedPiece(game: Chess, move: Move): PieceSymbol | undefined {
-    if (game.isAttacked(move.to, game.turn())) {
-      const board = game.board();
-      const fileIndex = move.to.charCodeAt(0) - "a".charCodeAt(0);
-      const rankIndex = 8 - parseInt(move.to[1]);
-      const piece = board[rankIndex][fileIndex];
-
-      return piece?.type;
-    }
-
-    return undefined;
-  }
-
-  fenToBoardRepresenation(fen: string): void {
-    // reference: https://www.youtube.com/watch?v=FsjIJMUIXLI
-    console.log("Recieved FEN: ", fen);
-    // Step 1: Split the string by spaces to separate the board from the other information
-    const fenParts = fen.split(" ");
-
-    // Step 2: Get the board layout (the first part, split by '/')
-    const boardLayout = fenParts[0].split("/");
-
-    // Step 3: Extract the other information
-    const turn = fenParts[1]; // 'w' or 'b'
-    const castlingRights = fenParts[2]; // 'KQkq'
-    const enPassant = fenParts[3]; // '-' (no en passant square in this case)
-    const halfmoveClock = fenParts[4]; // '0'
-    const fullmoveNumber = fenParts[5]; // '1'
-
-    const game = new Chess(fen);
-
-    // Output for debugging
-    console.log("Board Layout:", boardLayout);
-    console.log("Turn:", turn);
-    console.log("Castling Rights:", castlingRights);
-    console.log("En Passant:", enPassant);
-    console.log("Halfmove Clock:", halfmoveClock);
-    console.log("Fullmove Number:", fullmoveNumber);
-    console.log(game.ascii());
-
-    // Step 4: Iterate over the board layout
-    boardLayout.forEach((row, rowIndex) => {
-      console.log(`Row ${rowIndex + 1}: ${row}`);
-    });
-  }
-
-  printStatistics(game: Chess) {
-    if (print) {
-      const opponent = this.player === "w" ? "b" : "w";
-      const mobilityScore = mobiltyEvaluation(game, this.player, opponent);
-      const materialScore = materialEvaluation(game, this.player);
-      console.log("Playing as: ", this.player);
-      console.log("Mobility Score: ", MOBILITY_WEIGHT * mobilityScore);
-      console.log("Material Score: ", MATERIAL_WEIGHT * materialScore);
-      console.log(
-        "Rollouts: ",
-        rolloutCount,
-        ". Average time spent on rollouts: ",
-        rolloutTime / rolloutCount
-      );
-      console.log(
-        "Expansions: ",
-        expansionCount,
-        ". Average time spent on expansions: ",
-        expansionTime / expansionCount
-      );
-    }
-  }
-
-  getEvalution(game: Chess) {
-    return evaluateState(game, this.player);
+  showStatistics() {
+    console.log("########## New Move ##########");
+    // console.log(
+    //   "Selection time: ",
+    //   this.selectionTime,
+    //   "ms counter: ",
+    //   this.selectionCounter,
+    //   " and average time: ",
+    //   this.selectionTime / this.selectionCounter
+    // );
+    console.log(
+      "Expansion time: ",
+      this.expansionTime,
+      "ms counter: ",
+      this.expansionCounter,
+      " and average time: ",
+      this.expansionTime / this.expansionCounter
+    );
+    console.log(
+      "Rollout time: ",
+      this.rolloutTime,
+      "ms counter: ",
+      this.rolloutCounter,
+      " and average time: ",
+      this.rolloutTime / this.rolloutCounter
+    );
+    // console.log(
+    //   "Propagation time: ",
+    //   this.propagationTime,
+    //   "ms counter: ",
+    //   this.propagationCounter,
+    //   " and average time: ",
+    //   this.propagationTime / this.propagationCounter
+    // );
   }
 }
