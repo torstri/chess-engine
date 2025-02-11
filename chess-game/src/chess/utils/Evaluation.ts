@@ -8,7 +8,6 @@ import {
 } from "./Constants";
 import { PSQT_MAP, getSquareInTable, PSQT } from "./PSQT";
 
-
 export function isEndGame(fen: string): boolean {
   const boardState = fen.split(" ")[0];
 
@@ -59,7 +58,6 @@ export function evaluateTerminalState(game: Chess, player: Color): number {
 }
 
 export function evaluateState(game: Chess, player: Color): number {
-
   const mobilityScore = newMobilityEvaluation(game, player);
   const materialScore = materialEvaluation(game, player);
 
@@ -77,7 +75,7 @@ export function mobiltyEvaluation(
 
   let gameFen = game.fen();
   let fenParts = gameFen.split(" ");
-  let color = game.turn() === player ? opponent : player;
+  let color = game.turn() === player ? player : opponent;
   fenParts[1] = color;
   let newFen = fenParts.join(" ");
 
@@ -176,10 +174,9 @@ export function newMobilityEvaluation(game: Chess, player: Color): number {
           );
         }
       }
-
     });
   });
-  
+
   return playerMobility - opponentMobility;
 }
 
@@ -211,11 +208,12 @@ export function evaluateMobility(game: Chess, color: Color): number {
   game.board().forEach((row) => {
     row.forEach((square) => {
       // We control the square
-      if (square?.type &&
-          color === square?.color &&
-          game.isAttacked(square.square, color) &&
-          !legalMovesMap[square.square]
-        ) {
+      if (
+        square?.type &&
+        color === square?.color &&
+        game.isAttacked(square.square, color) &&
+        !legalMovesMap[square.square]
+      ) {
         // We also attack the square, and it is not a legal move
         defenseValue += valueOfSquare(square.type, square.square, color, fen);
       }
@@ -238,7 +236,7 @@ export function materialEvaluation(game: Chess, player: Color): number {
           square.color,
           fen
         );
-        materialScore += square.color == player ?  score : -score 
+        materialScore += square.color === player ? score : -score;
       }
     });
   });
