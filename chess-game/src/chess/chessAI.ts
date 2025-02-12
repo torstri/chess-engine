@@ -71,19 +71,19 @@ export class ChessAI {
   // Monte Carlo Tree Search
   makeMove(game: Chess): Move {
     // console.log("Current version making move for:", this.player);
-    let tempTime = 0;
+    // let tempTime = 0;
     let statistics = true;
 
-    this.iterations = 0;
+    // this.iterations = 0;
 
     // this.selectionCounter = 0;
     // this.selectionTime = 0;
 
-    this.expansionCounter = 0;
-    this.expansionTime = 0;
+    // this.expansionCounter = 0;
+    // this.expansionTime = 0;
 
-    this.rolloutCounter = 0;
-    this.rolloutTime = 0;
+    // this.rolloutCounter = 0;
+    // this.rolloutTime = 0;
 
     // this.propagationCounter = 0;
     // this.propagationTime = 0;
@@ -104,27 +104,21 @@ export class ChessAI {
       // this.selectionCounter++;
 
       // 2. Expansion (if visited before, no children and not terminal)
-      if (
-        leafNode.children.length === 0 &&
-        leafNode.visits > 0 &&
-        !leafNode.isTerminal()
-      ) {
-        tempTime = Date.now();
+      if (leafNode.isLeaf() && leafNode.visits > 0 && !leafNode.isTerminal()) {
+        // tempTime = Date.now();
         leafNode.nodeExpansion(this.player);
-        this.expansionTime += Date.now() - tempTime;
-        this.expansionCounter++;
+        // this.expansionTime += Date.now() - tempTime;
+        // this.expansionCounter++;
         // find a new leaf;
-        if (leafNode.children.length > 0) {
-          leafNode = this.getMaxUCBnode(leafNode);
-        }
+        leafNode = this.getMaxUCBnode(leafNode);
       }
 
       // 3. Rollout
-      tempTime = Date.now();
+      // tempTime = Date.now();
       let gameCopy = new Chess(leafNode.state.fen);
       const rolloutResult = this.rollout(gameCopy, 0);
-      this.rolloutTime += Date.now() - tempTime;
-      this.rolloutCounter++;
+      // this.rolloutTime += Date.now() - tempTime;
+      // this.rolloutCounter++;
 
       // 4. Propogation
       // tempTime = Date.now();
@@ -179,17 +173,6 @@ export class ChessAI {
 
     if (!move) throw new Error("No move found");
 
-    // We might be using to much memory (??)
-    // so we need to make some space
-    let testTime = Date.now();
-    let nodeNumber = this.root?.clearTree();
-    testTime = Date.now() - testTime;
-    console.log(
-      "Time to clear tree: ",
-      testTime,
-      " number of node: ",
-      nodeNumber
-    );
     return move;
   }
 
@@ -286,14 +269,9 @@ export class ChessAI {
   ucb1(score: number, N: number, n: number): number {
     if (n == 0 || N == 0) return Infinity;
 
-    const annealing = 2 - 0.1 * this.iterations;
+    const annealing = C * (1 - 0.1 * this.iterations);
 
-    let explorationConstant = Math.sqrt(Math.log(N) / n);
-
-    explorationConstant =
-      annealing > 0
-        ? explorationConstant * annealing * 2 * C
-        : explorationConstant;
+    let explorationConstant = annealing * Math.sqrt(Math.log(N) / n);
 
     return score / n + explorationConstant;
   }
