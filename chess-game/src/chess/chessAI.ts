@@ -105,7 +105,7 @@ export class ChessAI {
       // this.selectionCounter++;
 
       // 2. Expansion (if visited before, no children and not terminal)
-      if (leafNode.isLeaf() && leafNode.visits > 0 && !leafNode.isTerminal()) {
+      if (leafNode.visits > 0 && !leafNode.isTerminal()) {
         tempTime = Date.now();
         leafNode.nodeExpansion(this.player);
         this.expansionTime += Date.now() - tempTime;

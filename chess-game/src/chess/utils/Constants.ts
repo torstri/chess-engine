@@ -1,7 +1,7 @@
 export const C = 2;
-export const MAXDEPTH = 2;
+export const MAXDEPTH = 3;
 
-export const MAX_DEPTH_COMPENSATION = 6;
+export const MAX_DEPTH_COMPENSATION = 8;
 
 export const duration = 500;
 export const ALLOWED_DURATION = 500;

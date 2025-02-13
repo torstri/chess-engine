@@ -1,5 +1,4 @@
-import { Move, PieceSymbol } from "chess.js";
-import { END_GAME_PIECE_AMOUNT } from "./Constants";
+import { PieceSymbol } from "chess.js";
 //  ****************
 
 // See https://www.chessprogramming.org/Simplified_Evaluation_Function#Piece-Square_Tables
@@ -59,7 +58,7 @@ export const PSQT = {
     [0, 0, 0, 0, 0, 0, 0, 0],
   ],
   PAWN_ENDGAME: [
-    [200, 200, 200, 200, 200, 200, 200, 200],
+    [0, 0, 0, 0, 0, 0, 0, 0],
     [100, 100, 100, 100, 100, 100, 100, 100],
     [60, 60, 60, 60, 60, 60, 60, 60],
     [30, 30, 40, 50, 50, 40, 30, 30],
