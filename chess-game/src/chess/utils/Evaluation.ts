@@ -5,25 +5,39 @@ import {
   END_GAME_PIECE_AMOUNT,
   MOBILITY_WEIGHT,
   MATERIAL_WEIGHT,
+  MAX_EVALUATION,
+  stringPieceValue,
+  INITAL_MATERIAL_VALUE,
+  END_GAME_MATERIAL_THRESHOLD,
+  MAX_DEPTH_COMPENSATION,
 } from "./Constants";
 import { PSQT_MAP, getSquareInTable, PSQT } from "./PSQT";
 
 export function isEndGame(fen: string): boolean {
   const boardState = fen.split(" ")[0];
 
-  const pieceCount = boardState.split("").reduce((count, char) => {
-    if (/[prnbqkPRNBQK]/.test(char)) {
-      return count + 1;
+  // Calculate the total value of the pieces on the board
+  const currentPieceValue = boardState.split("").reduce((total, char) => {
+    const piece = char.toLowerCase(); // Convert char to lowercase
+    if (pieceValue.hasOwnProperty(piece)) {
+      return total + stringPieceValue[piece]; // Add the piece value to the total
     }
-    return count;
+    return total; // Return total if no matching piece value
   }, 0);
 
-  return pieceCount < END_GAME_PIECE_AMOUNT;
+  const materialPercentage = currentPieceValue / INITAL_MATERIAL_VALUE;
+
+  return materialPercentage < END_GAME_MATERIAL_THRESHOLD; // Return true if the total value is below the threshold
 }
 
-export function evaluateMove(game: Chess, move: Move, player: Color): number {
+export function evaluateMove(
+  game: Chess,
+  move: Move,
+  player: Color,
+  depth: number
+): number {
   if (game.isGameOver()) {
-    return evaluateTerminalState(game, player);
+    return evaluateTerminalState(game, player, depth);
   }
 
   let moveScore = 0;
@@ -44,17 +58,29 @@ export function evaluateMove(game: Chess, move: Move, player: Color): number {
   return moveScore;
 }
 
-export function evaluateTerminalState(game: Chess, player: Color): number {
+export function evaluateTerminalState(
+  game: Chess,
+  player: Color,
+  depth: number
+): number {
   let outCome;
 
+  const depthCompensation = Math.min(
+    MAX_DEPTH_COMPENSATION,
+    Math.max(1, depth)
+  );
   if (game.isCheckmate()) {
     outCome =
       game.turn() === player ? -stateBias.checkMate : stateBias.checkMate;
+    console.log(
+      "Found checkmate!! Evaluated to: ",
+      outCome / depthCompensation
+    );
   } else {
     outCome = stateBias.draw;
   }
 
-  return outCome;
+  return outCome / depthCompensation;
 }
 
 export function evaluateState(game: Chess, player: Color): number {
@@ -62,6 +88,10 @@ export function evaluateState(game: Chess, player: Color): number {
   const materialScore = materialEvaluation(game, player);
 
   return MATERIAL_WEIGHT * materialScore + mobilityScore * MOBILITY_WEIGHT;
+}
+
+export function clampEvaluation(value: number): number {
+  return Math.min(MAX_EVALUATION, Math.max(-MAX_EVALUATION, value));
 }
 
 export function mobiltyEvaluation(

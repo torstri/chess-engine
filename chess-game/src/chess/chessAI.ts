@@ -15,6 +15,7 @@ import {
   evaluateMobility,
   materialEvaluation,
   mobiltyEvaluation,
+  clampEvaluation,
 } from "./utils/Evaluation";
 
 import { Player } from "./utils/Types";
@@ -71,19 +72,19 @@ export class ChessAI {
   // Monte Carlo Tree Search
   makeMove(game: Chess): Move {
     // console.log("Current version making move for:", this.player);
-    // let tempTime = 0;
+    let tempTime = 0;
     let statistics = true;
 
-    // this.iterations = 0;
+    this.iterations = 0;
 
     // this.selectionCounter = 0;
     // this.selectionTime = 0;
 
-    // this.expansionCounter = 0;
-    // this.expansionTime = 0;
+    this.expansionCounter = 0;
+    this.expansionTime = 0;
 
-    // this.rolloutCounter = 0;
-    // this.rolloutTime = 0;
+    this.rolloutCounter = 0;
+    this.rolloutTime = 0;
 
     // this.propagationCounter = 0;
     // this.propagationTime = 0;
@@ -105,20 +106,20 @@ export class ChessAI {
 
       // 2. Expansion (if visited before, no children and not terminal)
       if (leafNode.isLeaf() && leafNode.visits > 0 && !leafNode.isTerminal()) {
-        // tempTime = Date.now();
+        tempTime = Date.now();
         leafNode.nodeExpansion(this.player);
-        // this.expansionTime += Date.now() - tempTime;
-        // this.expansionCounter++;
+        this.expansionTime += Date.now() - tempTime;
+        this.expansionCounter++;
         // find a new leaf;
         leafNode = this.getMaxUCBnode(leafNode);
       }
 
       // 3. Rollout
-      // tempTime = Date.now();
+      tempTime = Date.now();
       let gameCopy = new Chess(leafNode.state.fen);
-      const rolloutResult = this.rollout(gameCopy, 0);
-      // this.rolloutTime += Date.now() - tempTime;
-      // this.rolloutCounter++;
+      const rolloutResult = this.rollout(gameCopy, 0, leafNode.depth);
+      this.rolloutTime += Date.now() - tempTime;
+      this.rolloutCounter++;
 
       // 4. Propogation
       // tempTime = Date.now();
@@ -240,15 +241,27 @@ export class ChessAI {
   }
 
   // Plays a set of random moves to simulate play from a given node
-  rollout(game: Chess, depth: number, move?: Move): number {
+  rollout(
+    game: Chess,
+    depth: number,
+    startingDepth: number,
+    move?: Move
+  ): number {
     // Base case: we have reached a terminal state
-    if (game.isGameOver()) return evaluateTerminalState(game, this.player);
+    if (game.isGameOver()) {
+      console.log(
+        "Found terminal state with evaluation: " +
+          evaluateTerminalState(game, this.player, startingDepth)
+      );
+      return evaluateTerminalState(game, this.player, startingDepth);
+    }
 
     // Base care: not terminal but exceeded depth
     if (depth > MAXDEPTH) {
       let score = evaluateState(game, this.player);
-      score += move ? evaluateMove(game, move, this.player) : 0;
-      return score;
+      score += move ? evaluateMove(game, move, this.player, startingDepth) : 0;
+      // console.log("Evaluated non terminal to: " + clampEvaluation(score));
+      return clampEvaluation(score);
     }
 
     // Otherwise continue rollout
@@ -262,22 +275,29 @@ export class ChessAI {
       throw new Error("INVALID MOVE");
     }
 
-    return this.rollout(game, depth + 1, randomMove);
+    return this.rollout(game, depth + 1, startingDepth, randomMove);
   }
 
   // Formula used to determine the UCB value of a node
   ucb1(score: number, N: number, n: number): number {
     if (n == 0 || N == 0) return Infinity;
 
-    const annealing = C * (1 - 0.1 * this.iterations);
+    const annealing = 1 - 0.05 * this.iterations;
 
-    let explorationConstant = annealing * Math.sqrt(Math.log(N) / n);
+    let thing = annealing > 0 ? annealing * C : C;
 
+    let explorationConstant = thing * Math.sqrt(Math.log(N) / n);
+    if (explorationConstant < 0) {
+      console.log("Annealing = ", annealing);
+      console.log("Thing = ", thing);
+      console.log("Exploration constant = ", explorationConstant);
+    }
     return score / n + explorationConstant;
   }
 
   showStatistics() {
     console.log("########## New Move ##########");
+    console.log("Simulations: ", this.iterations);
     // console.log(
     //   "Selection time: ",
     //   this.selectionTime,
