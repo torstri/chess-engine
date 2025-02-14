@@ -1,29 +1,137 @@
-import { Chess, Move, PieceSymbol, validateFen, Color } from "chess.js";
+import { Chess, Move, PieceSymbol, Color, Square } from "chess.js";
 import { stateBias, Player } from "./Types";
 import {
   pieceValue,
-  END_GAME_PIECE_AMOUNT,
   MOBILITY_WEIGHT,
   MATERIAL_WEIGHT,
+  MAX_EVALUATION,
+  stringPieceValue,
+  INITAL_MATERIAL_VALUE,
+  END_GAME_MATERIAL_THRESHOLD,
+  MAX_DEPTH_COMPENSATION,
 } from "./Constants";
 import { PSQT_MAP, getSquareInTable, PSQT } from "./PSQT";
 
-export function isEndGame(fen: string): boolean {
+export function getCurrentPieceValue(fen: string): number {
   const boardState = fen.split(" ")[0];
 
-  const pieceCount = boardState.split("").reduce((count, char) => {
-    if (/[prnbqkPRNBQK]/.test(char)) {
-      return count + 1;
+  const currentPieceValue = boardState.split("").reduce((total, char) => {
+    const piece = char.toLowerCase();
+    if (pieceValue.hasOwnProperty(piece)) {
+      return total + stringPieceValue[piece];
     }
-    return count;
+    return total;
   }, 0);
-
-  return pieceCount < END_GAME_PIECE_AMOUNT;
+  return currentPieceValue;
 }
 
-export function evaluateMove(game: Chess, move: Move, player: Color): number {
+export function isEndGame(fen: string): boolean {
+  const currentPieceValue = getCurrentPieceValue(fen);
+  const materialPercentage = currentPieceValue / INITAL_MATERIAL_VALUE;
+
+  return materialPercentage < END_GAME_MATERIAL_THRESHOLD;
+}
+
+export function getEndGameWeight(fen: string): number {
+  const currentPieceValue = getCurrentPieceValue(fen);
+  const materialPercentage = currentPieceValue / INITAL_MATERIAL_VALUE;
+
+  return 1 - materialPercentage;
+}
+
+export function chebyshevDistance(
+  sqaure1File: number,
+  sqaure1Rank: number,
+  sqaure2File: number,
+  sqaure2Rank: number
+) {
+  if (
+    [sqaure1File, sqaure1Rank, sqaure2File, sqaure2Rank].some(
+      (val) => val < 0 || val > 7
+    )
+  ) {
+    throw new Error("Recieved file or rank values outside of range 0-7");
+  }
+  return Math.max(
+    Math.abs(sqaure1File - sqaure2File),
+    Math.abs(sqaure1Rank - sqaure2Rank)
+  );
+}
+
+export function evaluateKingPosition(game: Chess, player: Color) {
+  let opponentKingSquare: Square | null = null;
+  let playerKingSquare: Square | null = null;
+
+  game.board().forEach((row) => {
+    row.forEach((square) => {
+      if (square?.type === "k") {
+        if (square.color === player) {
+          playerKingSquare = square.square;
+          if (opponentKingSquare) {
+            return;
+          }
+        } else {
+          opponentKingSquare = square.square;
+          if (playerKingSquare) {
+            return;
+          }
+        }
+      }
+    });
+  });
+
+  const toCoords = (square: Square) => {
+    let file = square.charCodeAt(0) - "a".charCodeAt(0);
+    let rank = parseInt(square[1]) - 1;
+    return { file, rank };
+  };
+
+  if (!opponentKingSquare || !playerKingSquare) {
+    console.error("King positions were not found");
+    return null;
+  }
+  let opponentKingPos = toCoords(opponentKingSquare);
+  let playerKingPos = toCoords(playerKingSquare);
+
+  // https://en.wikipedia.org/wiki/Chebyshev_distance
+
+  const centerSquares = [
+    [3, 3],
+    [3, 4],
+    [4, 3],
+    [4, 4],
+  ];
+
+  // Shortest distance between opponent king and center squares
+  const opponentKingDistToCentre = Math.min(
+    ...centerSquares.map(([file, rank]) =>
+      chebyshevDistance(opponentKingPos.file, opponentKingPos.rank, file, rank)
+    )
+  );
+
+  // Distance between kings
+  const dstBetweenKings = chebyshevDistance(
+    opponentKingPos.file,
+    opponentKingPos.rank,
+    playerKingPos.file,
+    playerKingPos.rank
+  );
+
+  // Max distance between any two squares is 7
+  let evaluation = opponentKingDistToCentre + 7 - dstBetweenKings;
+  const fen = game.fen();
+
+  return evaluation * 10 * getEndGameWeight(fen);
+}
+
+export function evaluateMove(
+  game: Chess,
+  move: Move,
+  player: Color,
+  depth: number
+): number {
   if (game.isGameOver()) {
-    return evaluateTerminalState(game, player);
+    return evaluateTerminalState(game, player, depth);
   }
 
   let moveScore = 0;
@@ -38,15 +146,23 @@ export function evaluateMove(game: Chess, move: Move, player: Color): number {
   if (move.captured)
     moveScore +=
       move.color == player
-        ? pieceValue[move.captured] * 10
-        : -10 * pieceValue[move.captured];
+        ? pieceValue[move.captured]
+        : pieceValue[move.captured];
 
   return moveScore;
 }
 
-export function evaluateTerminalState(game: Chess, player: Color): number {
+export function evaluateTerminalState(
+  game: Chess,
+  player: Color,
+  depth: number
+): number {
   let outCome;
 
+  const depthCompensation = Math.min(
+    MAX_DEPTH_COMPENSATION,
+    Math.max(1, depth)
+  );
   if (game.isCheckmate()) {
     outCome =
       game.turn() === player ? -stateBias.checkMate : stateBias.checkMate;
@@ -54,50 +170,23 @@ export function evaluateTerminalState(game: Chess, player: Color): number {
     outCome = stateBias.draw;
   }
 
-  return outCome;
+  return outCome / depthCompensation;
 }
 
 export function evaluateState(game: Chess, player: Color): number {
-  const mobilityScore = newMobilityEvaluation(game, player);
+  const mobilityScore = mobilityEvaluation(game, player);
   const materialScore = materialEvaluation(game, player);
+  const kingScore = evaluateKingPosition(game, player) ?? 0;
 
-  return MATERIAL_WEIGHT * materialScore + mobilityScore * MOBILITY_WEIGHT;
+  return (
+    MATERIAL_WEIGHT * materialScore +
+    mobilityScore * MOBILITY_WEIGHT +
+    kingScore * 3
+  );
 }
 
-export function mobiltyEvaluation(
-  game: Chess,
-  player: Color,
-  opponent: Color
-): number {
-  // https://www.chessprogramming.org/Evaluation#General_Aspects
-  let playerMobility = 0;
-  let opponentMobility = 0;
-
-  let gameFen = game.fen();
-  let fenParts = gameFen.split(" ");
-  let color = game.turn() === player ? player : opponent;
-  fenParts[1] = color;
-  let newFen = fenParts.join(" ");
-
-  let gameCopy = new Chess();
-  if (validateFen(newFen).ok) {
-    gameCopy = new Chess(newFen);
-  } else {
-    gameCopy = new Chess(game.fen());
-    const randomIndex = Math.floor(Math.random() * game.moves().length);
-    const randomMove = gameCopy.moves()[randomIndex];
-    gameCopy.move(randomMove);
-  }
-
-  if (game.turn() === player) {
-    playerMobility = evaluateMobility(game, player);
-    opponentMobility = evaluateMobility(gameCopy, opponent);
-  } else {
-    playerMobility = evaluateMobility(gameCopy, player);
-    opponentMobility = evaluateMobility(game, opponent);
-  }
-
-  return playerMobility - opponentMobility;
+export function clampEvaluation(value: number): number {
+  return Math.min(MAX_EVALUATION, Math.max(-MAX_EVALUATION, value));
 }
 
 export function valueOfNewPos(move: Move, color: Color, fen: string): number {
@@ -142,7 +231,7 @@ export function valueOfSquare(
     : 0;
 }
 
-export function newMobilityEvaluation(game: Chess, player: Color): number {
+export function mobilityEvaluation(game: Chess, player: Color): number {
   let fen = game.fen();
 
   let playerMobility = 0;
@@ -178,49 +267,6 @@ export function newMobilityEvaluation(game: Chess, player: Color): number {
   });
 
   return playerMobility - opponentMobility;
-}
-
-export function evaluateMobility(game: Chess, color: Color): number {
-  // https://www.chessprogramming.org/Evaluation#General_Aspects
-
-  const legalMovesMap: { [key: string]: number } = {};
-  let newPosVal = 0;
-  let defenseValue = 0;
-  let fen = game.fen();
-
-  // More simple approach
-  // How many squares are we attacking?
-  // If enemy on the
-  // How many of our squares are attacked?
-
-  game.moves({ verbose: true }).forEach((move) => {
-    newPosVal += valueOfNewPos(move, move.color, fen);
-    if (move.captured) {
-      newPosVal += valueOfSquare(move.captured, move.to, move.color, fen);
-    }
-
-    // Save all squares we can move to with a legal move
-    legalMovesMap[move.to] = legalMovesMap[move.to]
-      ? legalMovesMap[move.to]++
-      : 1;
-  });
-
-  game.board().forEach((row) => {
-    row.forEach((square) => {
-      // We control the square
-      if (
-        square?.type &&
-        color === square?.color &&
-        game.isAttacked(square.square, color) &&
-        !legalMovesMap[square.square]
-      ) {
-        // We also attack the square, and it is not a legal move
-        defenseValue += valueOfSquare(square.type, square.square, color, fen);
-      }
-    });
-  });
-
-  return newPosVal + defenseValue;
 }
 
 export function materialEvaluation(game: Chess, player: Color): number {
