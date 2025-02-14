@@ -43,54 +43,64 @@ Create a Dockerfile for the backend
 
 dockerfile:
 ```
-# Use the base image
-FROM node:18
+# Use Golang image
+FROM golang:1.21 AS builder
 
-# Set the working directory
+# Set working directory
 WORKDIR /app
 
-# Copy package.json and install dependencies
-COPY package*.json ./
-RUN npm install
+# Copy the Go module files and download dependencies
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Copy the entire project
+# Copy the application source code
 COPY . .
 
-# Expose the port
-EXPOSE 5000
+# Build the Go application
+RUN go build -o main .
 
-# Start the backend
-CMD ["npm", "start"]
+# Use a lightweight image for production
+FROM alpine:latest
+WORKDIR /root/
+COPY --from=builder /app/main .
+
+# Expose the port
+EXPOSE 8080
+
+# Run the application
+CMD ["./main"]
+
 ```
 ### Frontend (frontend/Dockerfile)
 Create a Dockerfile for the frontend
 
 dockerfile:
 ```
-# Use Node.js as the base image
-FROM node:18
+# Use Node.js for building the React app
+FROM node:18 AS builder
 
-# Set the working directory
+# Set working directory
 WORKDIR /app
 
 # Copy package.json and install dependencies
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm install
 
-# Copy the rest of the project
+# Copy the rest of the project files
 COPY . .
 
-# Build the frontend (React example)
+# Build the React application
 RUN npm run build
 
-# Use nginx to serve the frontend
+# Use Nginx for serving the frontend
 FROM nginx:alpine
-COPY --from=0 /app/build /usr/share/nginx/html
+COPY --from=builder /app/build /usr/share/nginx/html
 
-# Expose port 80 for serving the app
+# Expose port 80 for serving the frontend
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
+
 ```
 ## 3. Create a docker-compose.yml File
 Create a ```docker-compose.yml``` in the root:
@@ -101,9 +111,7 @@ services:
   backend:
     build: ./backend
     ports:
-      - "5000:5000"
-    environment:
-      - NODE_ENV=production
+      - "8080:8080"
     networks:
       - app-network
 
@@ -119,20 +127,40 @@ services:
 networks:
   app-network:
     driver: bridge
+
 ```
 ## 4. Update the Frontend to Use the Backend
 
-Ensure that your frontend correctly communicates with the backend. If the frontend makes API requests, update fetch or axios calls:
+Ensure that your frontend correctly communicates with the backend. If the frontend makes API requests, update fetch or axios calls. 
+In your ../src/config.ts:
 
 ```Typescript
-const API_URL = process.env.REACT_APP_API_URL || "http://backend:5000";
+const API_URL = process.env.REACT_APP_API_URL || "http://backend:8080";
 fetch(`${API_URL}/api/data`)
 ```
 Then, in frontend/.env:
 
 ```Typescript
-REACT_APP_API_URL=http://backend:5000
+REACT_APP_API_URL=http://backend:8080
 
 ```
 
+## 5. Build and Run
+
+Run the following command in the root directory
+```
+docker-compose up --build
+```
+
+This will:
+
+- Build both frontend and backend Docker images
+- Start the services
+- Set up networking so the frontend can communicate with the backend
+
+## 6. Stop Containers
+
+```
+docker-compose down
+```
 
