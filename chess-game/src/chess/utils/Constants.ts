@@ -21,12 +21,16 @@ export const stringPieceValue: { [key: string]: number } = {
   b: 330,
   r: 500,
   q: 900,
-  k: 100,
+  k: 200,
   "": 0,
 };
 
-// 2 * (8 * pawn + 2 * (knight + bishop + rook) + king + queen)
-export const INITAL_MATERIAL_VALUE = 9120;
+export const INITAL_MATERIAL_VALUE =
+  2 *
+  (8 * pieceValue.p +
+    2 * (pieceValue.n + pieceValue.b + pieceValue.r) +
+    pieceValue.k +
+    pieceValue.q);
 
 export const END_GAME_MATERIAL_THRESHOLD = 0.5;
 
@@ -34,5 +38,5 @@ export const END_GAME_PIECE_AMOUNT = 20; // Completely arbitrary
 
 export const MAX_EVALUATION = pieceValue.q * 5;
 
-export const MOBILITY_WEIGHT = 0.5;
-export const MATERIAL_WEIGHT = 2;
+export const MOBILITY_WEIGHT = 0.4;
+export const MATERIAL_WEIGHT = 0.9;
