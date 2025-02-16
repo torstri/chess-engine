@@ -1,15 +1,11 @@
 import { useEffect, useState } from "react";
 import { Chess, Move, DEFAULT_POSITION } from "chess.js";
-import { Chessboard } from "react-chessboard";
-import { SetupCard } from "./SetupCard";
-import { Player } from "../utils/Types";
-import "../../CSS/AIGame.css";
-import { Grid2 } from "@mui/material";
-import { StatisticTable } from "./StatisticTable";
-import { ButtonGroup } from "./ButtonGroup";
-import { setVersion } from "./aiVersionMap";
+import { Player } from "../../engine/utils/Types";
+import "../../../CSS/AIGame.css";
+import { setVersion } from "../aiVersionMap";
+import { AIGameView } from "../views/AIGameView";
 
-function AIGame(): JSX.Element {
+function AIGamePresenter(): JSX.Element {
   const [game, setGame] = useState<Chess>(new Chess());
   const [gameFEN, setGameFEN] = useState<string>(game.fen());
   const [whiteBot, setWhiteBot] = useState<any>();
@@ -66,7 +62,7 @@ function AIGame(): JSX.Element {
     setGamesPlayed((gp) => {
       if (gp + 1 < numberOfGames) {
         resetGame();
-        togglePlay(true, false);
+        togglePlay(true);
         return gp + 1;
       }
       return 0;
@@ -109,9 +105,11 @@ function AIGame(): JSX.Element {
     return true;
   }
 
-  function togglePlay(start: boolean, pause: boolean) {
+  function togglePlay(start: boolean) {
+    // setStart(start);
+    // setPause(pause);
     setStart(start);
-    setPause(pause);
+    setPause(!start);
     setTurnCounter(0);
   }
 
@@ -124,71 +122,34 @@ function AIGame(): JSX.Element {
     setTurnCounter(0);
   }
 
-  function handleSetupUpdate(
+  function handleSetupChange(
     position: string,
     whiteVersion: string,
     blackVersion: string,
-    time: number,
-    color?: string
+    time: number
   ) {
     const newGame = new Chess(position);
     setGame(newGame);
     setGameFEN(position);
     setStartFen(position);
 
-    setWhiteBot(setVersion(newGame, whiteVersion, time, "w"))
-    setBlackBot(setVersion(newGame, blackVersion, time, "b"))
+    setWhiteBot(setVersion(newGame, whiteVersion, time, "w"));
+    setBlackBot(setVersion(newGame, blackVersion, time, "b"));
   }
 
   return (
-    <div
-      className="GameContainer"
-      style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}
-    >
-      <div style={{ border: "solid", margin: "10px" }}>
-        <Chessboard
-          boardWidth={800}
-          position={gameFEN}
-        />
-      </div>
-      <Grid2
-        style={{
-          minWidth: "30%",
-          maxWidth: "30%",
-          flexShrink: 0,
-          padding: "10px",
-        }}
-      >
-        <SetupCard
-          onFinishSetup={handleSetupUpdate}
-          onNumberOfGamesChange={setNumberOfGames}
-          isStart={start}
-          isHumanGame={false}
-        />
-        <ButtonGroup
-          start={start}
-          pause={pause}
-          togglePlay={togglePlay}
-          resetGame={resetGame}
-          isHumanGame={false}
-          disabled={!(whiteBot && blackBot)}
-        />
-        <StatisticTable
-          whiteWins={whiteWins}
-          blackWins={blackWins}
-          draws={draws}
-          gamesPlayed={gamesPlayed}
-        />
-      </Grid2>
-      <div style={{ width: "90%", display: "flex", justifyContent: "center" }}>
-        White Evaluation ={" "}
-        {whiteBot?.root?.state?.totalScore / whiteBot?.root?.visits}
-        <br></br>
-        Black Evaluation ={" "}
-        {blackBot?.root?.state?.totalScore / blackBot?.root?.visits}
-      </div>
-    </div>
+    <AIGameView
+      onTogglePlay={togglePlay}
+      onResetGame={resetGame}
+      onFinishSetup={handleSetupChange}
+      onSetNumberOfGames={setNumberOfGames}
+      fen={gameFEN}
+      whiteWins={whiteWins}
+      blackWins={blackWins}
+      gamesPlayed={gamesPlayed}
+      disable={!(whiteBot && blackBot)}
+    />
   );
 }
 
-export default AIGame;
+export default AIGamePresenter;

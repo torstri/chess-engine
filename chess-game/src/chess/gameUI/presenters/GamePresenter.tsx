@@ -1,22 +1,14 @@
 import { useEffect, useState, version } from "react";
 import { Chess, Color, Move, DEFAULT_POSITION } from "chess.js";
-import { Chessboard } from "react-chessboard";
 import { Square } from "react-chessboard/dist/chessboard/types";
-import Button from "@mui/material/Button";
-import "../../CSS/Game.css";
-import { Grid2 } from "@mui/material";
-import { ChessAI } from "../chessAI";
-import { chessAI_v1 } from "../../old-versions/chess-engine-1.0.0/chessAI_v1";
-import { chessAI_v2 } from "../../old-versions/chess-engine-2.0.0/chessAI_v2";
-import { chessAI_v3 } from "../../old-versions/chess-engine-3.0.0/chessAI_v3";
-import { ButtonGroup } from "../gameUI/ButtonGroup";
-import { SetupCard } from "./SetupCard";
-import { setVersion } from "./aiVersionMap";
+import "../../../CSS/Game.css";
+import { setVersion } from "../aiVersionMap";
+import { GameView } from "../views/GameView";
 
 // Define the type for the modify function used in safeGameMutate
 type ModifyFunction = (game: Chess) => void;
 
-function Game(): JSX.Element {
+function GamePresenter(): JSX.Element {
   const [game, setGame] = useState<Chess>(new Chess());
   const [gameFEN, setGameFEN] = useState<string>(game.fen());
   const [selectedPiece, setSelectedPiece] = useState<string>();
@@ -25,14 +17,14 @@ function Game(): JSX.Element {
   );
   const [sourceSelected, setSrcSelected] = useState<boolean>();
   const [m, setMove] = useState<Move | undefined>(undefined);
-  const [chessBot, setChessBot] = useState<
-    ChessAI | chessAI_v1 | chessAI_v2 | chessAI_v3
-  >();
+  const [chessBot, setChessBot] = useState<any>();
   const [isPlayerWhite, setIsPlayerWhite] = useState<boolean>(true);
   const [startFen, setStartFen] = useState<string>(DEFAULT_POSITION);
-  const [botSettings, setBotSettings] = useState<{version: string, time: number}>({version: "current", time: 500});
-  
-  
+  const [botSettings, setBotSettings] = useState<{
+    version: string;
+    time: number;
+  }>({ version: "current", time: 500 });
+
   useEffect(() => {
     setGameFEN(game.fen());
   }, [game]);
@@ -43,7 +35,9 @@ function Game(): JSX.Element {
       setSelectedPiece(undefined);
       setSrcSelected(false);
 
-      setTimeout(() => { computeMove(chessBot) }, 200);
+      setTimeout(() => {
+        computeMove(chessBot);
+      }, 200);
     }
   }, [m]);
 
@@ -139,15 +133,18 @@ function Game(): JSX.Element {
     setGame(newGame);
     setGameFEN(newGame.fen());
     setStartFen(position);
-    setBotSettings({version: isPlayerWhite ? blackVersion : whiteVersion, time: allowedDuration})
+    setBotSettings({
+      version: isPlayerWhite ? blackVersion : whiteVersion,
+      time: allowedDuration,
+    });
 
     setChessBot(() => {
       const newBot = setVersion(
-                newGame,
-                isPlayerWhite ? blackVersion : whiteVersion,
-                allowedDuration,
-                isPlayerWhite ? "b" : "w"
-              )
+        newGame,
+        isPlayerWhite ? blackVersion : whiteVersion,
+        allowedDuration,
+        isPlayerWhite ? "b" : "w"
+      );
 
       if (!isPlayerWhite) {
         computeMove(newBot);
@@ -155,63 +152,18 @@ function Game(): JSX.Element {
 
       return newBot;
     });
-    
   }
 
-  return (
-    <div
-      className="GameContainer"
-      style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}
-    >
-      <div className="ChessBoard" style={{ border: "solid", margin: "10px" }}>
-        <Chessboard
-          boardWidth={800}
-          position={gameFEN}
-          onSquareClick={handleSquareClick}
-          boardOrientation={isPlayerWhite ? "white" : "black"}
+  return <GameView 
+          onResetGame={resetGame}
+          onFinishSetup={finishSetup}
+          handleSquareClick={handleSquareClick}
+          onTogglePlayerColor={(playerColor: boolean) => {setIsPlayerWhite(playerColor)}}
+          fen={gameFEN}
+          isPlayerWhite={isPlayerWhite}
+          disable={!chessBot}
+          versionColor={isPlayerWhite ? "b" : "w"}
         />
-      </div>
-      <Grid2
-        style={{
-          minWidth: "30%",
-          maxWidth: "30%",
-          flexShrink: 0,
-          padding: "10px",
-        }}
-      >
-        <SetupCard onFinishSetup={finishSetup} isHumanGame={true} versionColor={isPlayerWhite ? "b" : "w"}></SetupCard>
-        <Button
-          onClick={() => { setIsPlayerWhite(!isPlayerWhite) }}
-          variant="outlined"
-          sx={{
-            backgroundColor: isPlayerWhite ? "white" : "black",
-            color: isPlayerWhite ? "black" : "white",
-            borderColor: "black",
-            "&:hover": {
-              backgroundColor: isPlayerWhite ? "#f0f0f0" : "#333",
-            },
-            marginTop: "10px",
-          }}
-        >
-          {isPlayerWhite ? "Playing as White" : "Playing as Black"}
-        </Button>
-        <ButtonGroup
-          pause={false}
-          togglePlay={() => {}}
-          resetGame={resetGame}
-          isHumanGame={true}
-          disabled={false}
-        ></ButtonGroup>
-      </Grid2>
-      {chessBot?.root?.state && (
-        <div
-          style={{ width: "100%", display: "flex", justifyContent: "center" }}
-        >
-          Evaluation = {chessBot.root?.state.totalScore / chessBot.root?.visits}
-        </div>
-      )}
-    </div>
-  );
 }
 
-export default Game;
+export default GamePresenter;

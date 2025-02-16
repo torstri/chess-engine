@@ -23,7 +23,7 @@ export function VersionSelect({
 
   const [blackVersion, setBlackVersion] = useState<string>("");
   const [whiteVersion, setWhiteVersion] = useState<string>("");
-  
+
   function renderVersion(version: string, index: number) {
     return (
       <MenuItem key={index} value={version}>
@@ -31,68 +31,43 @@ export function VersionSelect({
       </MenuItem>
     );
   }
-  
-  function handleVersionSelect(version: string, color: string): void {
-    
-    onVersionSelect(version, color);
-    
-    if(color === "w") setWhiteVersion(version);
-    if(color === "b") setBlackVersion(version);
 
-  };
+  function handleVersionSelect(version: string, color: string): void {
+    onVersionSelect(version, color);
+    if (color === "w") setWhiteVersion(version);
+    if (color === "b") setBlackVersion(version);
+  }
+
+  function renderVersionSelectForm(color: string) {
+    return (
+      <FormControl fullWidth>
+        <InputLabel id={`version-select-label-${color}`}>
+        Select AI version {color === 'w' ? " ( White )" : " ( Black )"}
+      </InputLabel>
+      <Select
+          labelId={`version-select-label-${color}`}
+          value={color === "w" ? whiteVersion : blackVersion}
+          label="Select an AI version"
+          onChange={(e) => {
+            handleVersionSelect(e.target.value, color);
+          }}
+      >
+        {Object.keys(aiVersions).map(renderVersion)}
+      </Select>
+    </FormControl>
+    );
+  }
 
   return (
     <Grid2 container spacing={1}>
-      {isHumanGame && versionColor ? (
-        <FormControl fullWidth>
-          <InputLabel id="version-select-label">
-            Select an AI version
-          </InputLabel>
-          <Select
-            labelId="version-select-label"
-            value={versionColor === "w" ? whiteVersion : blackVersion}
-            label="Select an AI version"
-            onChange={(e) => {
-              handleVersionSelect(e.target.value, versionColor);
-            }}
-          >
-            {Object.keys(aiVersions).map(renderVersion)}
-          </Select>
-        </FormControl>
-      ) : (
+      {isHumanGame && versionColor ?
+        renderVersionSelectForm(versionColor)
+      : (
         <>
-          <FormControl fullWidth>
-            <InputLabel id="version-select-label">
-              Select a version for White
-            </InputLabel>
-            <Select
-              labelId="version-select-label"
-              value={whiteVersion}
-              label="Select an AI version"
-              onChange={(e) => {
-                handleVersionSelect(e.target.value, "w");
-              }}
-            >
-              {Object.keys(aiVersions).map(renderVersion)}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth>
-            <InputLabel id="version-select-label">
-              Select a version for Black
-            </InputLabel>
-            <Select
-              labelId="version-select-label"
-              value={blackVersion}
-              label="Select an AI version"
-              onChange={(e) => {
-                handleVersionSelect(e.target.value, "b");
-              }}
-            >
-              {Object.keys(aiVersions).map(renderVersion)}
-            </Select>
-          </FormControl>
+          {renderVersionSelectForm("w")}
+          {renderVersionSelectForm("b")}
         </>
-      )}
+    )}
     </Grid2>
   );
 }
