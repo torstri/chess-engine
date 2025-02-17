@@ -1,5 +1,5 @@
 import { Chess, Color } from "chess.js";
-import { ChessAI } from "../chessAI";
+import { ChessAI } from "../engine/chessAI";
 import { chessAI_v1 } from "../../old-versions/chess-engine-1.0.0/chessAI_v1";
 import { chessAI_v2 } from "../../old-versions/chess-engine-2.0.0/chessAI_v2";
 import { chessAI_v3 } from "../../old-versions/chess-engine-3.0.0/chessAI_v3";

@@ -1,55 +1,40 @@
 import { Button } from "@mui/material";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 interface ButtonGroupProps {
-  start?: boolean;
-  pause?: boolean;
-  togglePlay: (start: boolean, pause: boolean) => void;
-  resetGame: () => void;
+  onStart?: (start: boolean) => void;
+  onReset: () => void;
+  disable: boolean;
   isHumanGame: boolean;
-  disabled: boolean;
+  
 }
 
 export function ButtonGroup({
-  start,
-  pause,
-  togglePlay,
-  resetGame,
+  onStart,
+  onReset,
+  disable,
   isHumanGame,
-  disabled,
 }: ButtonGroupProps): JSX.Element {
   const navigate = useNavigate(); // Ensure navigation works inside the component
+  const [start, setStart] = useState<boolean>();
 
   return (
     <div className="button-group">
-      {!isHumanGame ?
-      <>
-      {!start ? (
-          <Button
-            onClick={() => {
-              togglePlay(true, false);
-            }}
-            variant="outlined"
-            disabled={disabled}
-          >
-            Start
-          </Button>
-        ) : (
-          <Button
-            variant="outlined"
-            onClick={() => {
-              togglePlay(!start, !pause);
-            }}
-            disabled={disabled}
-          >
-            Pause
-          </Button>
-        )}
-        </>
-        :
-        <></>
-      }
-      <Button variant="outlined" onClick={resetGame} disabled={disabled}>
+      <Button
+          onClick={() => {
+            setStart((s) => {
+              if(onStart) onStart(!s)
+              return !s
+            });
+          }}
+          variant="outlined"
+          disabled={disable}
+          sx={{ visibility: isHumanGame ? 'hidden' : 'visible' }}
+        >
+        {start ? 'pause' : 'start'}
+      </Button>
+      <Button variant="outlined" onClick={onReset} disabled={disable}>
         Reset
       </Button>
       <Button
